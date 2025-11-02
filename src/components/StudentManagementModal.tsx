@@ -104,7 +104,7 @@ export const StudentManagementModal: React.FC<StudentManagementModalProps> = ({
 
     try {
       // Update student information
-      const { data, error } = await AdminApi.updateUser(student.student_id, {
+      const { error } = await AdminApi.updateUser(student.student_id, {
         full_name: editedStudent.full_name,
         email: editedStudent.email
       });

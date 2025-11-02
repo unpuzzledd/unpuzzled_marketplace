@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 interface ViewTopicProps {
   isOpen?: boolean;
@@ -8,7 +8,6 @@ interface ViewTopicProps {
 
 export const ViewTopic: React.FC<ViewTopicProps> = ({ isOpen = true, onClose }) => {
   const navigate = useNavigate();
-  const { topicId } = useParams();
 
   const handleClose = () => {
     if (onClose) {

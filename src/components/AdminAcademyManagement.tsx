@@ -234,12 +234,12 @@ export const AdminAcademyManagement: React.FC<AdminAcademyManagementProps> = ({
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                       academy.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      academy.status === 'in_process' ? 'bg-blue-100 text-blue-800' :
-                      academy.status === 'approved' ? 'bg-green-100 text-green-800' :
-                      academy.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                      (academy.status as any) === 'in_process' ? 'bg-blue-100 text-blue-800' :
+                      (academy.status as any) === 'approved' ? 'bg-green-100 text-green-800' :
+                      (academy.status as any) === 'rejected' ? 'bg-red-100 text-red-800' :
                       academy.status === 'active' ? 'bg-green-100 text-green-800' :
                       academy.status === 'suspended' ? 'bg-orange-100 text-orange-800' :
-                      academy.status === 'deactivated' ? 'bg-gray-100 text-gray-800' :
+                      (academy.status as any) === 'deactivated' ? 'bg-gray-100 text-gray-800' :
                       'bg-gray-100 text-gray-800'
                     }`}>
                       {academy.status.replace('_', ' ').toUpperCase()}

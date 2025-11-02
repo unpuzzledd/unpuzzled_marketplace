@@ -82,7 +82,7 @@ export const TeacherManagementModal: React.FC<TeacherManagementModalProps> = ({
 
     try {
       // Update teacher information
-      const { data, error } = await AdminApi.updateUser(teacher.teacher_id, {
+      const { error } = await AdminApi.updateUser(teacher.teacher_id, {
         full_name: editedTeacher.full_name,
         email: editedTeacher.email
       });

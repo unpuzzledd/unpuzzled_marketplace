@@ -199,14 +199,14 @@ export class AdminApi {
         .range((page - 1) * limit, page * limit - 1);
 
       if (error) {
-        return { data: [], totalPages: 0, error: error.message };
+        return { data: [], totalPages: 0, error: error.message, count: 0, page, pageSize: limit };
       }
 
       const totalPages = Math.ceil((count || 0) / limit);
-      return { data: data || [], totalPages, error: null };
+      return { data: data || [], totalPages, error: null, count: count || 0, page, pageSize: limit };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to get academies by status';
-      return { data: [], totalPages: 0, error: errorMessage };
+      return { data: [], totalPages: 0, error: errorMessage, count: 0, page, pageSize: limit };
     }
   }
 

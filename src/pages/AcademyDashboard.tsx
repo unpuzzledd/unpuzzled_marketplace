@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { AdminApi } from '../lib/adminApi'
@@ -65,101 +65,102 @@ const AcademyDashboard = () => {
     }
   }, [user, loading, navigate])
 
-  // Fetch academy data
-  useEffect(() => {
-    const fetchAcademyData = async () => {
-      if (!user || user.role !== 'academy_owner') return
+  // Fetch academy data function
+  const fetchAcademyData = useCallback(async () => {
+    if (!user || user.role !== 'academy_owner') return
 
-      setDataLoading(true)
-      setDataError(null)
+    setDataLoading(true)
+    setDataError(null)
 
-      try {
-        // Get academy details
-        const academyResponse = await AdminApi.getAcademyByOwnerId(user.id)
-        if (academyResponse.error || !academyResponse.data) {
-          setDataError(academyResponse.error || 'Failed to fetch academy data')
-          return
-        }
-
-        setAcademyData(academyResponse.data)
-
-        // Get academy statistics
-        const statsResponse = await AdminApi.getAcademyStatistics(academyResponse.data.id)
-        if (statsResponse.error || !statsResponse.data) {
-          setDataError(statsResponse.error || 'Failed to fetch statistics')
-          return
-        }
-
-        setStatistics(statsResponse.data)
-
-        // Get academy skills
-        const skillsResponse = await AdminApi.getAcademySkills(academyResponse.data.id)
-        if (skillsResponse.error || !skillsResponse.data) {
-          setDataError(skillsResponse.error || 'Failed to fetch skills')
-          return
-        }
-
-        setAcademySkills(skillsResponse.data)
-
-        // Get academy teachers
-        const teachersResponse = await AdminApi.getAcademyTeachers(academyResponse.data.id)
-        if (teachersResponse.error || !teachersResponse.data) {
-          setDataError(teachersResponse.error || 'Failed to fetch teachers')
-          return
-        }
-
-        setTeachers(teachersResponse.data)
-
-        // Get academy students
-        const studentsResponse = await AdminApi.getAcademyStudents(academyResponse.data.id)
-        if (studentsResponse.error || !studentsResponse.data) {
-          setDataError(studentsResponse.error || 'Failed to fetch students')
-          return
-        }
-
-        setStudents(studentsResponse.data)
-
-        // Get academy batches
-        const batchesResponse = await AdminApi.getAcademyBatches(academyResponse.data.id)
-        if (batchesResponse.error || !batchesResponse.data) {
-          setDataError(batchesResponse.error || 'Failed to fetch batches')
-          return
-        }
-
-        setBatches(batchesResponse.data)
-
-        // Get student scores
-        const scoresResponse = await AdminApi.getAcademyStudentScores(academyResponse.data.id)
-        if (scoresResponse.error || !scoresResponse.data) {
-          setDataError(scoresResponse.error || 'Failed to fetch student scores')
-          return
-        }
-
-        setStudentScores(scoresResponse.data)
-
-        // Get batch enrollments
-        const enrollmentsResponse = await AdminApi.getAcademyBatchEnrollments(academyResponse.data.id)
-        if (enrollmentsResponse.error || !enrollmentsResponse.data) {
-          setDataError(enrollmentsResponse.error || 'Failed to fetch batch enrollments')
-          return
-        }
-
-        setBatchEnrollments(enrollmentsResponse.data)
-
-        // Debug logging
-        console.log('Teachers data:', teachersResponse.data)
-        console.log('Students data:', studentsResponse.data)
-        console.log('Batches data:', batchesResponse.data)
-      } catch (error) {
-        console.error('Error fetching academy data:', error)
-        setDataError(error instanceof Error ? error.message : 'Failed to fetch academy data')
-      } finally {
-        setDataLoading(false)
+    try {
+      // Get academy details
+      const academyResponse = await AdminApi.getAcademyByOwnerId(user.id)
+      if (academyResponse.error || !academyResponse.data) {
+        setDataError(academyResponse.error || 'Failed to fetch academy data')
+        return
       }
-    }
 
-    fetchAcademyData()
+      setAcademyData(academyResponse.data)
+
+      // Get academy statistics
+      const statsResponse = await AdminApi.getAcademyStatistics(academyResponse.data.id)
+      if (statsResponse.error || !statsResponse.data) {
+        setDataError(statsResponse.error || 'Failed to fetch statistics')
+        return
+      }
+
+      setStatistics(statsResponse.data)
+
+      // Get academy skills
+      const skillsResponse = await AdminApi.getAcademySkills(academyResponse.data.id)
+      if (skillsResponse.error || !skillsResponse.data) {
+        setDataError(skillsResponse.error || 'Failed to fetch skills')
+        return
+      }
+
+      setAcademySkills(skillsResponse.data)
+
+      // Get academy teachers
+      const teachersResponse = await AdminApi.getAcademyTeachers(academyResponse.data.id)
+      if (teachersResponse.error || !teachersResponse.data) {
+        setDataError(teachersResponse.error || 'Failed to fetch teachers')
+        return
+      }
+
+      setTeachers(teachersResponse.data)
+
+      // Get academy students
+      const studentsResponse = await AdminApi.getAcademyStudents(academyResponse.data.id)
+      if (studentsResponse.error || !studentsResponse.data) {
+        setDataError(studentsResponse.error || 'Failed to fetch students')
+        return
+      }
+
+      setStudents(studentsResponse.data)
+
+      // Get academy batches
+      const batchesResponse = await AdminApi.getAcademyBatches(academyResponse.data.id)
+      if (batchesResponse.error || !batchesResponse.data) {
+        setDataError(batchesResponse.error || 'Failed to fetch batches')
+        return
+      }
+
+      setBatches(batchesResponse.data)
+
+      // Get student scores
+      const scoresResponse = await AdminApi.getAcademyStudentScores(academyResponse.data.id)
+      if (scoresResponse.error || !scoresResponse.data) {
+        setDataError(scoresResponse.error || 'Failed to fetch student scores')
+        return
+      }
+
+      setStudentScores(scoresResponse.data)
+
+      // Get batch enrollments
+      const enrollmentsResponse = await AdminApi.getAcademyBatchEnrollments(academyResponse.data.id)
+      if (enrollmentsResponse.error || !enrollmentsResponse.data) {
+        setDataError(enrollmentsResponse.error || 'Failed to fetch batch enrollments')
+        return
+      }
+
+      setBatchEnrollments(enrollmentsResponse.data)
+
+      // Debug logging
+      console.log('Teachers data:', teachersResponse.data)
+      console.log('Students data:', studentsResponse.data)
+      console.log('Batches data:', batchesResponse.data)
+    } catch (error) {
+      console.error('Error fetching academy data:', error)
+      setDataError(error instanceof Error ? error.message : 'Failed to fetch academy data')
+    } finally {
+      setDataLoading(false)
+    }
   }, [user])
+
+  // Fetch academy data on mount
+  useEffect(() => {
+    fetchAcademyData()
+  }, [fetchAcademyData])
 
   const handleLogout = async () => {
     setLoggingOut(true)
@@ -369,12 +370,12 @@ const AcademyDashboard = () => {
                     {academyData?.status && (
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                         academyData.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        academyData.status === 'in_process' ? 'bg-blue-100 text-blue-800' :
-                        academyData.status === 'approved' ? 'bg-green-100 text-green-800' :
-                        academyData.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                        (academyData.status as any) === 'in_process' ? 'bg-blue-100 text-blue-800' :
+                        (academyData.status as any) === 'approved' ? 'bg-green-100 text-green-800' :
+                        (academyData.status as any) === 'rejected' ? 'bg-red-100 text-red-800' :
                         academyData.status === 'active' ? 'bg-green-100 text-green-800' :
                         academyData.status === 'suspended' ? 'bg-orange-100 text-orange-800' :
-                        academyData.status === 'deactivated' ? 'bg-gray-100 text-gray-800' :
+                        (academyData.status as any) === 'deactivated' ? 'bg-gray-100 text-gray-800' :
                         'bg-gray-100 text-gray-800'
                       }`}>
                         {academyData.status.replace('_', ' ').toUpperCase()}
@@ -389,19 +390,19 @@ const AcademyDashboard = () => {
                 <div className="w-full px-4">
                   <div className={`p-3 rounded-lg text-sm ${
                     academyData.status === 'pending' ? 'bg-yellow-50 text-yellow-800 border border-yellow-200' :
-                    academyData.status === 'in_process' ? 'bg-blue-50 text-blue-800 border border-blue-200' :
-                    academyData.status === 'approved' ? 'bg-green-50 text-green-800 border border-green-200' :
-                    academyData.status === 'rejected' ? 'bg-red-50 text-red-800 border border-red-200' :
+                    (academyData.status as any) === 'in_process' ? 'bg-blue-50 text-blue-800 border border-blue-200' :
+                    (academyData.status as any) === 'approved' ? 'bg-green-50 text-green-800 border border-green-200' :
+                    (academyData.status as any) === 'rejected' ? 'bg-red-50 text-red-800 border border-red-200' :
                     academyData.status === 'suspended' ? 'bg-orange-50 text-orange-800 border border-orange-200' :
-                    academyData.status === 'deactivated' ? 'bg-gray-50 text-gray-800 border border-gray-200' :
+                    (academyData.status as any) === 'deactivated' ? 'bg-gray-50 text-gray-800 border border-gray-200' :
                     'bg-gray-50 text-gray-800 border border-gray-200'
                   }`}>
                     {academyData.status === 'pending' && '⏳ Your academy is pending admin approval. You can update details but cannot manage students/teachers until approved.'}
-                    {academyData.status === 'in_process' && '🔍 Your academy is currently under review by admin. Please wait for approval.'}
-                    {academyData.status === 'approved' && '✅ Your academy has been approved! You can now manage students and teachers.'}
-                    {academyData.status === 'rejected' && '❌ Your academy application was rejected. Please contact admin for more information.'}
+                    {(academyData.status as any) === 'in_process' && '🔍 Your academy is currently under review by admin. Please wait for approval.'}
+                    {(academyData.status as any) === 'approved' && '✅ Your academy has been approved! You can now manage students and teachers.'}
+                    {(academyData.status as any) === 'rejected' && '❌ Your academy application was rejected. Please contact admin for more information.'}
                     {academyData.status === 'suspended' && '⚠️ Your academy is currently suspended. Contact admin for reactivation.'}
-                    {academyData.status === 'deactivated' && '🚫 Your academy has been deactivated. Contact admin for reactivation.'}
+                    {(academyData.status as any) === 'deactivated' && '🚫 Your academy has been deactivated. Contact admin for reactivation.'}
                   </div>
                 </div>
               )}

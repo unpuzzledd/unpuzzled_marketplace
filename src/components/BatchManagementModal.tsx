@@ -54,11 +54,6 @@ export const BatchManagementModal: React.FC<BatchManagementModalProps> = ({
   const [availableSkills, setAvailableSkills] = useState<any[]>([]);
   const [selectedStudent, setSelectedStudent] = useState('');
   const [topics, setTopics] = useState<any[]>([]);
-  const [newTopic, setNewTopic] = useState({
-    name: '',
-    description: '',
-    due_date: ''
-  });
   
   // Topic modal states
   const [showCreateTopic, setShowCreateTopic] = useState(false);
@@ -143,7 +138,7 @@ export const BatchManagementModal: React.FC<BatchManagementModalProps> = ({
     try {
       if (isCreating) {
         // Create new batch
-        const { data, error } = await AdminApi.createBatch({
+        const { error } = await AdminApi.createBatch({
           name: editedBatch.name,
           skill_id: editedBatch.skill_id,
           teacher_id: editedBatch.teacher_id,
@@ -234,34 +229,6 @@ export const BatchManagementModal: React.FC<BatchManagementModalProps> = ({
     }
   };
 
-  const handleAddTopic = async () => {
-    if (!newTopic.name || !batch) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const { error } = await AdminApi.createBatchTopic(batch.id, {
-        name: newTopic.name,
-        description: newTopic.description,
-        due_date: newTopic.due_date
-      });
-      
-      if (error) {
-        setError(error);
-        return;
-      }
-
-      setNewTopic({ name: '', description: '', due_date: '' });
-      loadBatchData();
-      onBatchUpdated();
-    } catch (error) {
-      setError('Failed to add topic to batch');
-      console.error('Error adding topic to batch:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleDeleteTopic = async (topicId: string) => {
     if (!confirm('Are you sure you want to delete this topic?')) {

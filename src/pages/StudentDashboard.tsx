@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BellIcon, MagnifyingGlassIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
+import { BellIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '../hooks/useAuth'
 import { StudentApi } from '../lib/studentApi'
 import { StudentBatchDetailModal } from '../components/student/StudentBatchDetailModal'
@@ -120,10 +120,6 @@ const StudentDashboard = () => {
   const handleSignOut = async () => {
     await signOut()
     navigate('/')
-  }
-
-  const handleBatchClick = (batch: any) => {
-    setSelectedBatch(batch)
   }
 
   const handleCloseBatchModal = () => {

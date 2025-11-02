@@ -186,6 +186,7 @@ export interface PaginatedResponse<T> {
   page: number;
   pageSize: number;
   totalPages: number;
+  error?: string | null;
 }
 
 // Photo upload types
