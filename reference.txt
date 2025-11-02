@@ -1,0 +1,67 @@
+
+Working flow:
+Admin flow to academy:
+1.	Admin will be able create the academy 
+2.	Delete the academy 
+3.	Update the status of the academy(Pending/Activate/Suspend)
+4.	Location creation
+5.	Skill creation 
+6.	Admin only will be able to change Academy Name 
+7.	Academy students, batches will have a start and end date
+
+Admin flow to Teachers: None
+Admin to Students: None
+
+Role of Super Admin: 
+•	Create a new Admin
+•	Update / Delete the Admin
+
+8.	Academy will be able to handle Students and Teachers data:
+Attributes of Academy
+
+•	Name, Number, Location(dropdown Available), Photo(4), Activity/Skill(Chess, Art, etc)(Multi select Dropdown available), Owner name & Phone number, Teacher(Not part of sign-up form), Teacher can be managed in Academy dashboard, Create/Manage batch of kids option in dashboard 
+•	Update details, if not approved. 
+•	No further actions can be done until activated. 
+•	Academy can have multiple skills. 
+•	Update their Photo, skills and location anytime, that goes for approval to Admin 
+•	Academy can create batches of kids for a skill 
+
+
+Academy to Teachers:
+•	Academy can create, Pending/Approved/Rejected for fresh teacher Sign-up
+•	One academy can have multiple teachers 
+•	One academy can have multiple teachers with one skill
+•	One academy can have one teacher having multiple  skill
+•	Academy will be assigning the batches to teacher - Each batch will be having one teacher associated. 
+•	One teacher can have multiple batches. 
+•	Academy will be having an access to Reject/Suspend the existing teachers. 
+•	Academy will be creating/updating  the topics with the date, description(no change in title of the topic)
+Academy to students:
+•	Academy can create, Pending/Approved/Rejected for fresh Student Sign-up
+•	One academy can have multiple students 
+•	One academy can have multiple students with one Batch
+•	One academy can have one Student enrolled in multiple skills/batch
+•	Academy will be assigning the batches to student. 
+•	Academy will be having an access to Reject/Suspend the existing students. 
+•	Score update for each student based on their level – Numerical 4 digit entity
+
+
+Teacher:
+•	Teacher can’t create / manage batches
+•	Teachers can create/manage/delete a Topic for a batch. 
+Teachers to students: 
+•	Score update for each student based on their level – Numerical 4 digit entity 
+•	Batch handling for students’ segregation 
+•	Option to edit the Topics covered 
+
+Leader board:
+•	Show Individual score for respective student & skill.  
+•	Show Top 3 of the academy in any dashboard
+•	When view full list show only top 20 students
+Student: 
+•	One student can be enrolled in multiple skills
+•	One student can be enrolled in multiple Academy
+•	One student can be enrolled in multiple skills in one academy
+•	One student – One batch under one skill
+Topic: 
+Name, description, due date 

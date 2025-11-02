@@ -1,0 +1,240 @@
+# Unpuzzled POC Signup - Application Documentation
+
+## 📋 Project Overview
+A React application with Google OAuth authentication, role-based access control, and admin functionality. Built with React + TypeScript + Vite, using Supabase for authentication and database.
+
+## 🏗️ Tech Stack
+- **Frontend**: React + TypeScript + Vite
+- **Authentication**: Supabase Auth with Google OAuth
+- **Database**: Supabase PostgreSQL
+- **Styling**: TailwindCSS
+- **Routing**: React Router
+
+## 🔐 Authentication System
+
+### User Roles
+- `admin` - System administrators
+- `academy_owner` - Academy owners
+- `teacher` - Teachers
+- `student` - Students
+
+### Authentication Flows
+
+#### 1. Smart Login Flow (Main "Log In" button)
+- **Purpose**: Automatically detects user role and redirects accordingly
+- **Flow**: Home → Google OAuth → SmartRedirect → Role-based redirect
+- **Redirects**:
+  - Admin users → `/admin` (Admin Dashboard)
+  - Regular users with role → `/dashboard` (User Dashboard)
+  - Users without role → `/role-selection`
+  - No user → `/` (Home)
+
+#### 2. Sign Up Flow ("Sign Up" button)
+- **Purpose**: For new users to create accounts
+- **Flow**: Home → Google OAuth → Role Selection → Dashboard
+- **Redirects**: Always to `/role-selection` for role selection
+
+#### 3. Admin Login Flow ("Admin" button)
+- **Purpose**: Dedicated admin access
+- **Flow**: Home → Admin Sign In → Google OAuth → Admin Dashboard
+- **Access Control**: Only authorized emails can access
+
+### Authorized Admin Emails
+- `admin@unpuzzled.com`
+- `superadmin@unpuzzled.com`
+- `neeraj.7always@gmail.com`
+
+## 🗄️ Database Schema
+
+### Core Tables
+- `users` - User profiles (extends auth.users)
+- `academies` - Academy information
+- `teachers` - Teacher profiles
+- `students` - Student profiles
+- `batches` - Class batches
+- `topics` - Course topics
+- `student_scores` - Student performance scores
+- `skills` - Available skills/courses
+- `locations` - Geographic locations
+
+### Key Relationships
+- Users can have roles: admin, academy_owner, teacher, student
+- Academies have owners, teachers, students, and batches
+- Teachers can have multiple skills and batches
+- Students can be enrolled in multiple batches
+- Batches have topics and student scores
+
+## 🔧 Key Features
+
+### 1. Smart Authentication
+- **Automatic role detection** - No need for separate admin login
+- **Single login button** - Works for both regular users and admins
+- **Role-based routing** - Smart redirects based on user permissions
+
+### 2. Fallback User Creation
+- **Database trigger**: `on_auth_user_created` → `handle_new_user()`
+- **Fallback mechanism**: If trigger fails, `fetchUserProfile` creates user record
+- **Error handling**: Graceful handling of missing user records
+
+### 3. Admin Panel
+- **Barebone admin dashboard** with mock data
+- **Tab navigation**: Dashboard, Academies, Locations, Skills
+- **Admin authentication** with Google OAuth
+- **Logout functionality** redirects to homepage
+
+### 4. User Management
+- **Role selection** for new users
+- **Profile management** with role updates
+- **Session persistence** across page refreshes
+
+### 5. Academy Dashboard (NEW)
+- **Beautiful academy interface** designed with Builder.io
+- **Role-based access control** - only accessible to academy_owner role
+- **Academy management features** with activity cards
+- **Responsive design** with sidebar navigation
+- **Modal functionality** for adding activities
+- **User profile display** with logout functionality
+
+## 📁 File Structure
+
+```
+src/
+├── App.tsx                 # Main app with routing
+├── hooks/
+│   ├── useAuth.tsx        # Main authentication hook
+│   └── useAdminAuth.tsx   # Admin authentication hook
+├── lib/
+│   └── supabase.ts        # Supabase client configuration
+├── pages/
+│   ├── AcademyDashboard.tsx # NEW: Main academy dashboard (default home)
+│   ├── Home.tsx           # OLD: Landing page (now at /old-home)
+│   ├── SignIn.tsx         # Dedicated sign-in page
+│   ├── RoleSelection.tsx  # Role selection for new users
+│   ├── Dashboard.tsx      # User dashboard
+│   ├── AdminDashboard.tsx # Admin panel
+│   ├── AdminSignIn.tsx    # Admin login page
+│   └── SmartRedirect.tsx  # Smart redirect logic
+└── types/
+    └── auth.ts            # TypeScript interfaces
+```
+
+## 🔄 User Flows
+
+### New User Sign-Up
+1. Click "Sign Up" on homepage
+2. Google OAuth authentication
+3. Redirect to role selection
+4. Choose role (Student/Teacher/Academy Owner)
+5. Smart redirect based on role:
+   - Academy Owner → Academy Dashboard
+   - Student/Teacher → User Dashboard
+
+### Existing User Login
+1. Click "Log In" on homepage
+2. Google OAuth authentication
+3. Smart redirect based on role:
+   - Admin → Admin Dashboard
+   - Academy Owner → Academy Dashboard
+   - Student/Teacher → User Dashboard
+   - No role → Role Selection
+
+### Admin Access
+1. Click "Admin" on homepage
+2. Admin sign-in page
+3. Google OAuth with email validation
+4. Admin Dashboard (if authorized)
+
+### Academy Owner Access
+1. Sign up/login with academy_owner role
+2. Automatic redirect to Academy Dashboard
+3. Access denied for non-academy owners
+
+## 🛠️ Development Setup
+
+### Environment Variables
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+### Database Setup
+1. Apply `supabase-schema.sql` to create tables and triggers
+2. Configure Google OAuth in Supabase dashboard
+3. Set up RLS policies for security
+
+### Running the Application
+```bash
+npm install
+npm run dev
+```
+
+## 🔒 Security Features
+
+### Row Level Security (RLS)
+- Enabled on all user tables
+- Role-based access policies
+- Admin-only access to sensitive data
+
+### Authentication Security
+- Google OAuth integration
+- Session management with Supabase
+- Automatic logout on unauthorized access
+
+## 🐛 Known Issues & Solutions
+
+### Issue: User Record Not Created
+**Problem**: Sign-up creates auth user but not public user record
+**Solution**: Fallback mechanism in `fetchUserProfile` creates missing records
+
+### Issue: Admin Access Denied
+**Problem**: Non-admin emails trying to access admin panel
+**Solution**: Email whitelist in `useAdminAuth` hook
+
+### Issue: Loading States
+**Problem**: Both buttons showing loading simultaneously
+**Solution**: Separate loading states for each button
+
+## 📝 Future Enhancements
+
+### Database Schema (Based on reference.txt)
+- Academy management system
+- Teacher-student relationships
+- Batch and topic management
+- Student scoring system
+- Leaderboard functionality
+
+### Admin Features
+- Academy creation and management
+- Teacher approval workflows
+- Student enrollment management
+- Performance analytics
+
+### User Features
+- Profile management
+- Course enrollment
+- Progress tracking
+- Score viewing
+
+## 🔧 Maintenance Notes
+
+### Database Triggers
+- `on_auth_user_created` trigger creates public user records
+- If trigger fails, fallback mechanism handles user creation
+- Monitor logs for trigger execution issues
+
+### Authentication Hooks
+- `useAuth` - Main authentication for regular users
+- `useAdminAuth` - Admin-specific authentication
+- Both hooks handle session persistence and logout
+
+### Error Handling
+- Graceful fallbacks for missing user records
+- Proper error messages for authentication failures
+- Loading states for better UX
+
+## 📞 Support
+For issues or questions, refer to this documentation or check the code comments for implementation details.
+
+---
+*Last Updated: January 2025*
+*Version: 1.0.0*
