@@ -75,8 +75,25 @@ const AcademyDashboard = () => {
     try {
       // Get academy details
       const academyResponse = await AdminApi.getAcademyByOwnerId(user.id)
+      
+      // Handle case when no academy exists yet (expected for new academy owners)
+      if (!academyResponse.data && !academyResponse.error) {
+        // No academy exists - this is expected for new academy owners
+        setAcademyData(null)
+        setStatistics(null)
+        setAcademySkills([])
+        setTeachers([])
+        setStudents([])
+        setBatches([])
+        setStudentScores([])
+        setBatchEnrollments([])
+        setDataLoading(false)
+        return
+      }
+      
       if (academyResponse.error || !academyResponse.data) {
         setDataError(academyResponse.error || 'Failed to fetch academy data')
+        setDataLoading(false)
         return
       }
 
@@ -283,6 +300,71 @@ const AcademyDashboard = () => {
           >
             Go to Home
           </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Show "no academy" state for new academy owners
+  if (!dataLoading && !dataError && !academyData) {
+    return (
+      <div className="min-h-screen bg-[#F7FCFA] font-[Lexend]">
+        {/* Header */}
+        <header className="bg-white border-b border-[#E5E8EB]">
+          <div className="flex justify-between items-center px-10 py-3">
+            <div className="flex items-center gap-4">
+              <div className="flex flex-col items-start">
+                <div className="w-4 h-4 relative">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M0.333333 0.333333H4.7778V4.7778H9.2222V9.2222H13.6667V13.6667H0.333333V0.333333V0.333333Z" fill="#0F1717"/>
+                  </svg>
+                </div>
+              </div>
+              <h1 className="text-lg font-bold text-[#0F1717] leading-[23px]">Unpuzzle Club</h1>
+            </div>
+            
+            <div className="flex justify-end items-center gap-4 flex-1">
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <p className="text-sm font-medium text-[#0F1717]">{user?.full_name || 'Academy Owner'}</p>
+                  <p className="text-xs text-[#5E8C7D]">Academy Owner</p>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  disabled={loggingOut}
+                  className="px-3 py-1 bg-[#F0F5F2] text-[#0D1C17] font-medium text-xs rounded-lg hover:bg-[#E5F5F0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {loggingOut && (
+                    <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  )}
+                  {loggingOut ? 'Logging out...' : 'Logout'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div className="flex items-center justify-center min-h-[600px]">
+          <div className="text-center max-w-md px-4">
+            <div className="w-20 h-20 bg-[#009963] rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-[#0F1717] mb-4">Welcome to Unpuzzled!</h2>
+            <p className="text-[#5E8C7D] mb-6">
+              You haven't created an academy yet. Please contact an administrator to create your academy, or use the admin panel if you have access.
+            </p>
+            <button
+              onClick={() => navigate('/')}
+              className="px-6 py-3 bg-[#009963] text-white rounded-lg hover:bg-[#007a4d] transition-colors"
+            >
+              Go to Home
+            </button>
+          </div>
         </div>
       </div>
     )

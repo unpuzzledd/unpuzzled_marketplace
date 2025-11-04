@@ -22,7 +22,11 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 1. Go to Authentication > Providers in your Supabase dashboard
 2. Enable Google provider
 3. Add your Google OAuth credentials (Client ID and Client Secret)
-4. Set redirect URL to: `http://localhost:5173/auth/callback`
+4. Set redirect URL to: `http://localhost:5173/auth/callback` (for development)
+5. **For production:** Add `https://unpuzzled-marketplace.vercel.app/**` to Redirect URLs in Authentication > URL Configuration
+6. **Set Site URL** to: `https://unpuzzled-marketplace.vercel.app` (in Authentication > URL Configuration)
+
+**See `SUPABASE_PRODUCTION_CONFIG.md` for detailed production setup instructions.**
 
 ### 4. Set up Database
 Run the SQL from `supabase-schema.sql` in your Supabase SQL editor.

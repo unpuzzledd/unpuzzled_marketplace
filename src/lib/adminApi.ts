@@ -898,10 +898,20 @@ export class AdminApi {
           owner:users(*)
         `)
         .eq('owner_id', ownerId)
-        .single();
+        .maybeSingle(); // Changed to maybeSingle() to handle case when no academy exists
 
       if (error) {
+        // Check if it's the "no rows" error (PGRST116)
+        if (error.code === 'PGRST116') {
+          // No academy exists - this is expected for new academy owners
+          return { data: null, error: null };
+        }
         return { data: null, error: error.message };
+      }
+
+      // If no data and no error, no academy exists
+      if (!data) {
+        return { data: null, error: null };
       }
 
       return { data, error: null };

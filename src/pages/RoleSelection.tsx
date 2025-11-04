@@ -14,7 +14,17 @@ const RoleSelection = () => {
     try {
       setIsSubmitting(true)
       await updateUserRole(selectedRole)
-      navigate('/dashboard')
+      
+      // Redirect based on selected role
+      if (selectedRole === 'academy_owner') {
+        navigate('/academy')
+      } else if (selectedRole === 'teacher') {
+        navigate('/teacher')
+      } else if (selectedRole === 'student') {
+        navigate('/student')
+      } else {
+        navigate('/dashboard')
+      }
     } catch (error) {
       console.error('Error updating role:', error)
     } finally {
