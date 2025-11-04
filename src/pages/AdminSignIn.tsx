@@ -62,7 +62,7 @@ const AdminSignIn = () => {
           <div className="text-xs text-gray-600 space-y-1">
             <div>• admin@unpuzzled.com</div>
             <div>• superadmin@unpuzzled.com</div>
-            <div>• neeraj.7always@gmail.com</div>
+            <div>• unpuzzleclub@gmail.com</div>
           </div>
         </div>
       </div>

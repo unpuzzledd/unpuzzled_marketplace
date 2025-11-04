@@ -99,7 +99,7 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
     const adminEmails = [
       'admin@unpuzzled.com',
       'superadmin@unpuzzled.com',
-      'neeraj.7always@gmail.com', // Your existing email set as admin
+      'unpuzzleclub@gmail.com', // Admin email
       // Add more admin emails here as needed
     ]
     return adminEmails.includes(email.toLowerCase())
