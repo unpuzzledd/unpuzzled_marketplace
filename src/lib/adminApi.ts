@@ -447,17 +447,22 @@ export class AdminApi {
   static async deleteLocation(locationId: string): Promise<ApiResponse<boolean>> {
     try {
       // Check if location is being used by any academy
-      const { data: academies, error: checkError } = await supabase
+      // Since location_ids is an array, we need to check if the location_id exists in the array
+      // Fetch all academies and check if location_id is in their location_ids array
+      const { data: allAcademies, error: checkError } = await supabase
         .from('academies')
-        .select('id')
-        .eq('location_id', locationId)
-        .limit(1);
+        .select('id, location_ids');
 
       if (checkError) {
         return { data: null, error: checkError.message };
       }
 
-      if (academies && academies.length > 0) {
+      // Check if any academy has this location_id in their location_ids array
+      const isLocationInUse = allAcademies?.some(academy => 
+        academy.location_ids && Array.isArray(academy.location_ids) && academy.location_ids.includes(locationId)
+      );
+
+      if (isLocationInUse) {
         return { data: null, error: 'Cannot delete location that is being used by academies' };
       }
 
@@ -560,17 +565,21 @@ export class AdminApi {
   static async deleteSkill(skillId: string): Promise<ApiResponse<boolean>> {
     try {
       // Check if skill is being used by any academy (check skill_ids array)
-      const { data: academies, error: checkError } = await supabase
+      // Fetch all academies and check if skill_id is in their skill_ids array
+      const { data: allAcademies, error: checkError } = await supabase
         .from('academies')
-        .select('id, skill_ids')
-        .contains('skill_ids', [skillId])
-        .limit(1);
+        .select('id, skill_ids');
 
       if (checkError) {
         return { data: null, error: checkError.message };
       }
 
-      if (academies && academies.length > 0) {
+      // Check if any academy has this skill_id in their skill_ids array
+      const isSkillInUse = allAcademies?.some(academy => 
+        academy.skill_ids && Array.isArray(academy.skill_ids) && academy.skill_ids.includes(skillId)
+      );
+
+      if (isSkillInUse) {
         return { data: null, error: 'Cannot delete skill that is being used by academies' };
       }
 
