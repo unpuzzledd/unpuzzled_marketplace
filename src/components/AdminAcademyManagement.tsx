@@ -46,7 +46,14 @@ export const AdminAcademyManagement: React.FC<AdminAcademyManagementProps> = ({
         20, 
         selectedStatus === 'all' ? undefined : selectedStatus
       );
-      setAcademies(academyResponse.data);
+      
+      if (academyResponse.error) {
+        console.error('Error loading academies:', academyResponse.error);
+        setError(academyResponse.error);
+        return;
+      }
+      
+      setAcademies(academyResponse.data || []);
       setTotalPages(academyResponse.totalPages);
 
       // Load locations and users for forms
@@ -57,6 +64,7 @@ export const AdminAcademyManagement: React.FC<AdminAcademyManagementProps> = ({
       setLocations(locationsData);
       setUsers(usersData);
     } catch (err) {
+      console.error('Error in loadData:', err);
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
       setLoading(false);
@@ -133,11 +141,16 @@ export const AdminAcademyManagement: React.FC<AdminAcademyManagementProps> = ({
 
   const startEdit = (academy: Academy) => {
     setEditingAcademy(academy);
+    // Note: location_id is deprecated, using location_ids array now
+    // For edit form, we'll use the first location_id if available, or empty string
+    const firstLocationId = academy.location_ids && academy.location_ids.length > 0 
+      ? academy.location_ids[0] 
+      : '';
     setFormData({
       name: academy.name,
       phone_number: academy.phone_number,
       owner_id: academy.owner_id,
-      location_id: academy.location_id || ''
+      location_id: firstLocationId
     });
     setShowEditForm(true);
   };

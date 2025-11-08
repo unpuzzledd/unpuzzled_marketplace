@@ -16,8 +16,11 @@
 ```
 https://unpuzzled-marketplace.vercel.app/**
 https://unpuzzled-marketplace.vercel.app/*
+https://unpuzzled-marketplace.vercel.app/admin
+https://unpuzzled-marketplace.vercel.app/admin/**
 http://localhost:5173/**  (keep for development)
 http://localhost:5173/*   (keep for development)
+http://localhost:5173/admin  (keep for development)
 ```
 
 **Important:** Use wildcards (`**` or `*`) to allow all routes on your domain.
@@ -95,6 +98,32 @@ After updating the configuration:
 
 4. **Check Vercel environment variables:**
    - Ensure `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are set correctly
+
+### If getting 404 error on admin sign-in:
+
+**Error:** `Could not find a relationship between 'academies' and 'locations'` or `404 Not Found` on Supabase URL
+
+**Solution:**
+1. **Verify Redirect URLs in Supabase Dashboard:**
+   - Go to: https://supabase.com/dashboard → Your Project → **Authentication** → **URL Configuration**
+   - Ensure these URLs are in "Redirect URLs":
+     - `https://unpuzzled-marketplace.vercel.app/**`
+     - `https://unpuzzled-marketplace.vercel.app/admin`
+     - `https://unpuzzled-marketplace.vercel.app/admin/**`
+
+2. **Verify Site URL:**
+   - Must be exactly: `https://unpuzzled-marketplace.vercel.app`
+   - No trailing slash
+
+3. **Check Google OAuth Console:**
+   - Go to: https://console.cloud.google.com → **APIs & Services** → **Credentials**
+   - In "Authorized redirect URIs", ensure you have:
+     - `https://rupjlkhrcpgrahrcowpk.supabase.co/auth/v1/callback`
+     - (This is your Supabase project's OAuth callback URL)
+
+4. **Clear browser cache and cookies** for both your app and Supabase
+
+5. **Test in Incognito/Private window** to rule out browser cache issues
 
 ---
 
