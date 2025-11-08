@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AdminApi } from '../lib/adminApi';
 import { Academy, Location, User } from '../types/database';
+import { AdminAcademyProfileView } from './AdminAcademyProfileView';
 
 interface AdminAcademyManagementProps {
   onAcademyUpdate?: () => void;
@@ -21,6 +22,8 @@ export const AdminAcademyManagement: React.FC<AdminAcademyManagementProps> = ({
   // Form states (only for editing, not creating)
   const [showEditForm, setShowEditForm] = useState(false);
   const [editingAcademy, setEditingAcademy] = useState<Academy | null>(null);
+  const [showProfileView, setShowProfileView] = useState(false);
+  const [viewingAcademy, setViewingAcademy] = useState<Academy | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     phone_number: '',
@@ -225,7 +228,21 @@ export const AdminAcademyManagement: React.FC<AdminAcademyManagementProps> = ({
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {(academy as any).location?.name || 'No location'}
+                    {academy.location_ids && academy.location_ids.length > 0 ? (
+                      <div className="space-y-1">
+                        {academy.location_ids.slice(0, 2).map((locationId) => {
+                          const location = locations.find(loc => loc.id === locationId);
+                          return location ? (
+                            <div key={locationId}>{location.name}</div>
+                          ) : null;
+                        })}
+                        {academy.location_ids.length > 2 && (
+                          <div className="text-gray-500">+{academy.location_ids.length - 2} more</div>
+                        )}
+                      </div>
+                    ) : (
+                      'No locations'
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
@@ -245,6 +262,15 @@ export const AdminAcademyManagement: React.FC<AdminAcademyManagementProps> = ({
                     {new Date(academy.created_at).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                    <button
+                      onClick={() => {
+                        setViewingAcademy(academy);
+                        setShowProfileView(true);
+                      }}
+                      className="text-[#009963] hover:text-[#007a4d] font-medium"
+                    >
+                      View Profile
+                    </button>
                     <button
                       onClick={() => startEdit(academy)}
                       className="text-blue-600 hover:text-blue-900"
@@ -410,6 +436,27 @@ export const AdminAcademyManagement: React.FC<AdminAcademyManagementProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Profile View Modal */}
+      {showProfileView && viewingAcademy && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto p-4">
+          <div className="bg-white rounded-lg w-full max-w-5xl my-8">
+            <AdminAcademyProfileView
+              academy={viewingAcademy}
+              onSuccess={() => {
+                setShowProfileView(false);
+                setViewingAcademy(null);
+                loadData();
+                onAcademyUpdate?.();
+              }}
+              onCancel={() => {
+                setShowProfileView(false);
+                setViewingAcademy(null);
+              }}
+            />
           </div>
         </div>
       )}

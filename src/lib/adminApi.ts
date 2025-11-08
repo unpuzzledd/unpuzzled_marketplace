@@ -3,9 +3,6 @@ import {
   Academy, 
   Location, 
   Skill, 
-  AcademyPhoto, 
-  AcademySkill, 
-  // User,
   Admin,
   ApiResponse,
   PaginatedResponse 
@@ -35,7 +32,6 @@ export class AdminApi {
         })
         .select(`
           *,
-          location:locations(*),
           owner:users(*)
         `)
         .single();
@@ -86,7 +82,39 @@ export class AdminApi {
         .eq('id', academyId)
         .select(`
           *,
-          location:locations(*),
+          owner:users(*)
+        `)
+        .single();
+
+      if (error) {
+        return { data: null, error: error.message };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update academy status';
+      return { data: null, error: errorMessage };
+    }
+  }
+
+  /**
+   * Update academy status with notes (admin only)
+   */
+  static async updateAcademyStatusWithNotes(
+    academyId: string, 
+    status: 'pending' | 'in_process' | 'approved' | 'rejected' | 'active' | 'suspended' | 'deactivated',
+    notes?: string | null
+  ): Promise<ApiResponse<Academy>> {
+    try {
+      const { data, error } = await supabase
+        .from('academies')
+        .update({ 
+          status,
+          status_notes: notes || null
+        })
+        .eq('id', academyId)
+        .select(`
+          *,
           owner:users(*)
         `)
         .single();
@@ -116,7 +144,6 @@ export class AdminApi {
         .eq('id', academyId)
         .select(`
           *,
-          location:locations(*),
           owner:users(*)
         `)
         .single();
@@ -151,7 +178,6 @@ export class AdminApi {
         .eq('id', academyId)
         .select(`
           *,
-          location:locations(*),
           owner:users(*)
         `)
         .single();
@@ -226,7 +252,6 @@ export class AdminApi {
         .from('academies')
         .select(`
           *,
-          location:locations(*),
           owner:users(*)
         `, { count: 'exact' })
         .eq('status', status)
@@ -258,7 +283,6 @@ export class AdminApi {
         .from('academies')
         .select(`
           *,
-          location:locations(*),
           owner:users(*)
         `, { count: 'exact' });
 
@@ -465,18 +489,18 @@ export class AdminApi {
    */
   static async deleteSkill(skillId: string): Promise<ApiResponse<boolean>> {
     try {
-      // Check if skill is being used by any academy
-      const { data: academySkills, error: checkError } = await supabase
-        .from('academy_skills')
-        .select('id')
-        .eq('skill_id', skillId)
+      // Check if skill is being used by any academy (check skill_ids array)
+      const { data: academies, error: checkError } = await supabase
+        .from('academies')
+        .select('id, skill_ids')
+        .contains('skill_ids', [skillId])
         .limit(1);
 
       if (checkError) {
         return { data: null, error: checkError.message };
       }
 
-      if (academySkills && academySkills.length > 0) {
+      if (academies && academies.length > 0) {
         return { data: null, error: 'Cannot delete skill that is being used by academies' };
       }
 
@@ -524,23 +548,40 @@ export class AdminApi {
 
   /**
    * Get all pending academy photos for approval
+   * Note: With simplified structure, photos are just URLs in arrays
+   * This method returns academies with pending status that have photos
    */
-  static async getPendingPhotos(): Promise<AcademyPhoto[]> {
+  static async getPendingPhotos(): Promise<any[]> {
     try {
       const { data, error } = await supabase
-        .from('academy_photos')
+        .from('academies')
         .select(`
-          *,
-          academies!inner(name, owner_id)
+          id,
+          name,
+          owner_id,
+          photo_urls,
+          status,
+          owner:users(id, email, full_name)
         `)
         .eq('status', 'pending')
+        .not('photo_urls', 'is', null)
         .order('created_at', { ascending: false });
 
       if (error) {
         throw new Error(error.message);
       }
 
-      return data || [];
+      // Transform to match old format for compatibility
+      return (data || []).flatMap(academy => 
+        (academy.photo_urls || []).map((url: string, index: number) => ({
+          id: `${academy.id}-photo-${index}`,
+          academy_id: academy.id,
+          photo_url: url,
+          display_order: index + 1,
+          status: 'pending' as const,
+          academies: academy
+        }))
+      );
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to fetch pending photos';
       throw new Error(errorMessage);
@@ -549,24 +590,53 @@ export class AdminApi {
 
   /**
    * Get all pending academy skills for approval
+   * Note: With simplified structure, skills are just IDs in arrays
+   * This method returns academies with pending status that have skills
    */
-  static async getPendingSkills(): Promise<AcademySkill[]> {
+  static async getPendingSkills(): Promise<any[]> {
     try {
       const { data, error } = await supabase
-        .from('academy_skills')
+        .from('academies')
         .select(`
-          *,
-          academies!inner(name, owner_id),
-          skills!inner(name, description)
+          id,
+          name,
+          owner_id,
+          skill_ids,
+          status,
+          owner:users(id, email, full_name)
         `)
         .eq('status', 'pending')
+        .not('skill_ids', 'is', null)
         .order('created_at', { ascending: false });
 
       if (error) {
         throw new Error(error.message);
       }
 
-      return data || [];
+      // Get skill details for all skill IDs
+      const allSkillIds = new Set<string>();
+      (data || []).forEach((academy: any) => {
+        (academy.skill_ids || []).forEach((skillId: string) => allSkillIds.add(skillId));
+      });
+
+      const { data: skills } = await supabase
+        .from('skills')
+        .select('id, name, description')
+        .in('id', Array.from(allSkillIds));
+
+      const skillsMap = new Map((skills || []).map(s => [s.id, s]));
+
+      // Transform to match old format for compatibility
+      return (data || []).flatMap((academy: any) => 
+        (academy.skill_ids || []).map((skillId: string) => ({
+          id: `${academy.id}-skill-${skillId}`,
+          academy_id: academy.id,
+          skill_id: skillId,
+          status: 'pending' as const,
+          academies: academy,
+          skills: skillsMap.get(skillId)
+        }))
+      );
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to fetch pending skills';
       throw new Error(errorMessage);
@@ -574,35 +644,47 @@ export class AdminApi {
   }
 
   /**
-   * Approve academy photo
+   * Approve academy photo (no-op with simplified structure)
+   * Photos are automatically approved when added to array
    */
-  static async approvePhoto(photoId: string): Promise<ApiResponse<boolean>> {
-    try {
-      const { error } = await supabase
-        .from('academy_photos')
-        .update({ status: 'approved' })
-        .eq('id', photoId);
-
-      if (error) {
-        return { data: null, error: error.message };
-      }
-
-      return { data: true, error: null };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to approve photo';
-      return { data: null, error: errorMessage };
-    }
+  static async approvePhoto(_photoId: string): Promise<ApiResponse<boolean>> {
+    // With simplified structure, photos don't need approval
+    // They're automatically visible when added to photo_urls array
+    return { data: true, error: null };
   }
 
   /**
-   * Reject academy photo
+   * Reject academy photo (removes from array)
    */
   static async rejectPhoto(photoId: string): Promise<ApiResponse<boolean>> {
     try {
+      // photoId format: "{academy_id}-photo-{index}"
+      const [academyId] = photoId.split('-photo-');
+      
+      const { data: academy, error: fetchError } = await supabase
+        .from('academies')
+        .select('photo_urls')
+        .eq('id', academyId)
+        .single();
+
+      if (fetchError || !academy) {
+        return { data: null, error: 'Academy not found' };
+      }
+
+      const photoIndex = parseInt(photoId.split('-photo-')[1]);
+      const photoUrls = academy.photo_urls || [];
+      
+      if (photoIndex < 0 || photoIndex >= photoUrls.length) {
+        return { data: null, error: 'Photo not found' };
+      }
+
+      // Remove photo from array
+      const updatedPhotoUrls = photoUrls.filter((_: string, index: number) => index !== photoIndex);
+      
       const { error } = await supabase
-        .from('academy_photos')
-        .update({ status: 'rejected' })
-        .eq('id', photoId);
+        .from('academies')
+        .update({ photo_urls: updatedPhotoUrls })
+        .eq('id', academyId);
 
       if (error) {
         return { data: null, error: error.message };
@@ -616,35 +698,46 @@ export class AdminApi {
   }
 
   /**
-   * Approve academy skill
+   * Approve academy skill (no-op with simplified structure)
+   * Skills are automatically approved when added to array
    */
-  static async approveSkill(academySkillId: string): Promise<ApiResponse<boolean>> {
-    try {
-      const { error } = await supabase
-        .from('academy_skills')
-        .update({ status: 'approved' })
-        .eq('id', academySkillId);
-
-      if (error) {
-        return { data: null, error: error.message };
-      }
-
-      return { data: true, error: null };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to approve skill';
-      return { data: null, error: errorMessage };
-    }
+  static async approveSkill(_academySkillId: string): Promise<ApiResponse<boolean>> {
+    // With simplified structure, skills don't need approval
+    // They're automatically visible when added to skill_ids array
+    return { data: true, error: null };
   }
 
   /**
-   * Reject academy skill
+   * Reject academy skill (removes from array)
    */
   static async rejectSkill(academySkillId: string): Promise<ApiResponse<boolean>> {
     try {
+      // academySkillId format: "{academy_id}-skill-{skill_id}"
+      const [academyId, skillId] = academySkillId.split('-skill-');
+      
+      const { data: academy, error: fetchError } = await supabase
+        .from('academies')
+        .select('skill_ids')
+        .eq('id', academyId)
+        .single();
+
+      if (fetchError || !academy) {
+        return { data: null, error: 'Academy not found' };
+      }
+
+      const skillIds = academy.skill_ids || [];
+      
+      if (!skillIds.includes(skillId)) {
+        return { data: null, error: 'Skill not found' };
+      }
+
+      // Remove skill from array
+      const updatedSkillIds = skillIds.filter((id: string) => id !== skillId);
+      
       const { error } = await supabase
-        .from('academy_skills')
-        .update({ status: 'rejected' })
-        .eq('id', academySkillId);
+        .from('academies')
+        .update({ skill_ids: updatedSkillIds })
+        .eq('id', academyId);
 
       if (error) {
         return { data: null, error: error.message };
@@ -806,25 +899,37 @@ export class AdminApi {
         .select('*', { count: 'exact', head: true })
         .eq('status', 'suspended');
 
-      // Get photo counts
-      const { count: totalPhotos } = await supabase
-        .from('academy_photos')
-        .select('*', { count: 'exact', head: true });
-
-      const { count: pendingPhotos } = await supabase
-        .from('academy_photos')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending');
+      // Get photo counts (from academies.photo_urls arrays)
+      const { data: academiesWithPhotos } = await supabase
+        .from('academies')
+        .select('photo_urls, status');
+      
+      let totalPhotos = 0;
+      let pendingPhotos = 0;
+      (academiesWithPhotos || []).forEach((academy: any) => {
+        const photoCount = (academy.photo_urls || []).length;
+        totalPhotos += photoCount;
+        if (academy.status === 'pending') {
+          pendingPhotos += photoCount;
+        }
+      });
 
       // Get skill counts
       const { count: totalSkills } = await supabase
         .from('skills')
         .select('*', { count: 'exact', head: true });
 
-      const { count: pendingSkills } = await supabase
-        .from('academy_skills')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending');
+      // Get pending skills (from academies with pending status that have skills)
+      const { data: pendingAcademiesWithSkills } = await supabase
+        .from('academies')
+        .select('skill_ids')
+        .eq('status', 'pending')
+        .not('skill_ids', 'is', null);
+      
+      let pendingSkills = 0;
+      (pendingAcademiesWithSkills || []).forEach((academy: any) => {
+        pendingSkills += (academy.skill_ids || []).length;
+      });
 
       // Get admin counts
       const { count: totalAdmins } = await supabase
@@ -872,17 +977,30 @@ export class AdminApi {
         .order('created_at', { ascending: false })
         .limit(limit);
 
-      // Get recent photo uploads
-      const { data: recentPhotos } = await supabase
-        .from('academy_photos')
+      // Get recent photo uploads (from academies with photos)
+      const { data: recentAcademiesWithPhotos } = await supabase
+        .from('academies')
         .select(`
           id,
+          name,
+          photo_urls,
           status,
           created_at,
-          academies!inner(name, owner:users(full_name, email))
+          owner:users(full_name, email)
         `)
+        .not('photo_urls', 'is', null)
         .order('created_at', { ascending: false })
         .limit(limit);
+
+      const recentPhotos = (recentAcademiesWithPhotos || []).map((academy: any) => ({
+        id: `${academy.id}-photo`,
+        status: academy.status,
+        created_at: academy.created_at,
+        academies: {
+          name: academy.name,
+          owner: academy.owner
+        }
+      }));
 
       // Combine and sort by date
       const activities = [
@@ -921,7 +1039,6 @@ export class AdminApi {
    * Get academy details by owner ID
    */
   static async getAcademyByOwnerId(ownerId: string): Promise<ApiResponse<Academy & {
-    location: Location;
     owner: any;
   }>> {
     try {
@@ -929,7 +1046,6 @@ export class AdminApi {
         .from('academies')
         .select(`
           *,
-          location:locations(*),
           owner:users(*)
         `)
         .eq('owner_id', ownerId)
@@ -1010,15 +1126,18 @@ export class AdminApi {
         return { data: null, error: batchesError.message };
       }
 
-      // Get total photos
-      const { count: totalPhotos, error: photosError } = await supabase
-        .from('academy_photos')
-        .select('*', { count: 'exact', head: true })
-        .eq('academy_id', academyId);
+      // Get total photos (from photo_urls array)
+      const { data: academy, error: academyError } = await supabase
+        .from('academies')
+        .select('photo_urls')
+        .eq('id', academyId)
+        .single();
 
-      if (photosError) {
-        return { data: null, error: photosError.message };
+      if (academyError) {
+        return { data: null, error: academyError.message };
       }
+
+      const totalPhotos = (academy?.photo_urls || []).length;
 
       return {
         data: {
@@ -1041,24 +1160,24 @@ export class AdminApi {
    */
   static async getAcademySkills(academyId: string): Promise<ApiResponse<Skill[]>> {
     try {
-      // First get the academy_skills records
-      const { data: academySkillsData, error: academySkillsError } = await supabase
-        .from('academy_skills')
-        .select('skill_id')
-        .eq('academy_id', academyId)
-        .eq('status', 'approved');
+      // Get academy with skill_ids array
+      const { data: academy, error: academyError } = await supabase
+        .from('academies')
+        .select('skill_ids')
+        .eq('id', academyId)
+        .single();
 
-      if (academySkillsError) {
-        return { data: null, error: academySkillsError.message };
+      if (academyError) {
+        return { data: null, error: academyError.message };
       }
 
-      if (!academySkillsData || academySkillsData.length === 0) {
+      const skillIds = academy?.skill_ids || [];
+      
+      if (skillIds.length === 0) {
         return { data: [], error: null };
       }
 
       // Get the skill details
-      const skillIds = academySkillsData.map(item => item.skill_id);
-
       const { data: skillsData, error: skillsError } = await supabase
         .from('skills')
         .select('*')

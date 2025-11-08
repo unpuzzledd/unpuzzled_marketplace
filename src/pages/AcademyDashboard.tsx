@@ -6,6 +6,8 @@ import { Academy, Skill } from '../types/database'
 import { TeacherManagementModal } from '../components/TeacherManagementModal'
 import { StudentManagementModal } from '../components/StudentManagementModal'
 import { BatchManagementModal } from '../components/BatchManagementModal'
+import { AcademySetupForm } from '../components/AcademySetupForm'
+import { AcademyProfileManagement } from '../components/AcademyProfileManagement'
 
 const AcademyDashboard = () => {
   const [showAddActivityModal, setShowAddActivityModal] = useState(false)
@@ -28,7 +30,8 @@ const AcademyDashboard = () => {
   const [batchEnrollments, setBatchEnrollments] = useState<any[]>([])
   const [dataLoading, setDataLoading] = useState(true)
   const [dataError, setDataError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'overview' | 'teachers' | 'students' | 'batches' | 'analytics'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'teachers' | 'students' | 'batches' | 'analytics' | 'profile'>('overview')
+  const [showProfileManagement, setShowProfileManagement] = useState(false)
   
   // Teacher management modal state
   const [showTeacherModal, setShowTeacherModal] = useState(false)
@@ -77,7 +80,7 @@ const AcademyDashboard = () => {
       const academyResponse = await AdminApi.getAcademyByOwnerId(user.id)
       
       // Handle case when no academy exists yet (expected for new academy owners)
-      if (!academyResponse.data && !academyResponse.error) {
+      if (!academyResponse.data) {
         // No academy exists - this is expected for new academy owners
         setAcademyData(null)
         setStatistics(null)
@@ -88,10 +91,11 @@ const AcademyDashboard = () => {
         setStudentScores([])
         setBatchEnrollments([])
         setDataLoading(false)
+        setDataError(null) // Clear any previous errors
         return
       }
       
-      if (academyResponse.error || !academyResponse.data) {
+      if (academyResponse.error) {
         setDataError(academyResponse.error || 'Failed to fetch academy data')
         setDataLoading(false)
         return
@@ -305,7 +309,7 @@ const AcademyDashboard = () => {
     )
   }
 
-  // Show "no academy" state for new academy owners
+  // Show academy setup form for new academy owners
   if (!dataLoading && !dataError && !academyData) {
     return (
       <div className="min-h-screen bg-[#F7FCFA] font-[Lexend]">
@@ -347,24 +351,15 @@ const AcademyDashboard = () => {
           </div>
         </header>
 
-        <div className="flex items-center justify-center min-h-[600px]">
-          <div className="text-center max-w-md px-4">
-            <div className="w-20 h-20 bg-[#009963] rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-            </div>
-            <h2 className="text-2xl font-bold text-[#0F1717] mb-4">Welcome to Unpuzzled!</h2>
-            <p className="text-[#5E8C7D] mb-6">
-              You haven't created an academy yet. Please contact an administrator to create your academy, or use the admin panel if you have access.
-            </p>
-            <button
-              onClick={() => navigate('/')}
-              className="px-6 py-3 bg-[#009963] text-white rounded-lg hover:bg-[#007a4d] transition-colors"
-            >
-              Go to Home
-            </button>
-          </div>
+        <div className="py-8 px-4">
+          <AcademySetupForm
+            onSuccess={() => {
+              // Set loading state immediately to show loading screen
+              setDataLoading(true);
+              // Reload academy data after successful creation
+              fetchAcademyData();
+            }}
+          />
         </div>
       </div>
     )
@@ -468,7 +463,7 @@ const AcademyDashboard = () => {
               </div>
               
               {/* Status-based messages */}
-              {academyData?.status && academyData.status !== 'active' && (
+              {academyData?.status && (
                 <div className="w-full px-4">
                   <div className={`p-3 rounded-lg text-sm ${
                     academyData.status === 'pending' ? 'bg-yellow-50 text-yellow-800 border border-yellow-200' :
@@ -477,14 +472,24 @@ const AcademyDashboard = () => {
                     (academyData.status as any) === 'rejected' ? 'bg-red-50 text-red-800 border border-red-200' :
                     academyData.status === 'suspended' ? 'bg-orange-50 text-orange-800 border border-orange-200' :
                     (academyData.status as any) === 'deactivated' ? 'bg-gray-50 text-gray-800 border border-gray-200' :
+                    academyData.status === 'active' ? 'bg-green-50 text-green-800 border border-green-200' :
                     'bg-gray-50 text-gray-800 border border-gray-200'
                   }`}>
-                    {academyData.status === 'pending' && '⏳ Your academy is pending admin approval. You can update details but cannot manage students/teachers until approved.'}
-                    {(academyData.status as any) === 'in_process' && '🔍 Your academy is currently under review by admin. Please wait for approval.'}
-                    {(academyData.status as any) === 'approved' && '✅ Your academy has been approved! You can now manage students and teachers.'}
-                    {(academyData.status as any) === 'rejected' && '❌ Your academy application was rejected. Please contact admin for more information.'}
-                    {academyData.status === 'suspended' && '⚠️ Your academy is currently suspended. Contact admin for reactivation.'}
-                    {(academyData.status as any) === 'deactivated' && '🚫 Your academy has been deactivated. Contact admin for reactivation.'}
+                    <div className="mb-2">
+                      {academyData.status === 'pending' && '⏳ Your academy is pending admin approval. You can update details but cannot manage students/teachers until approved.'}
+                      {(academyData.status as any) === 'in_process' && '🔍 Your academy is currently under review by admin. Please wait for approval.'}
+                      {(academyData.status as any) === 'approved' && '✅ Your academy has been approved! You can now manage students and teachers.'}
+                      {(academyData.status as any) === 'rejected' && '❌ Your academy application was rejected. Please contact admin for more information.'}
+                      {academyData.status === 'suspended' && '⚠️ Your academy is currently suspended. Contact admin for reactivation.'}
+                      {(academyData.status as any) === 'deactivated' && '🚫 Your academy has been deactivated. Contact admin for reactivation.'}
+                      {academyData.status === 'active' && '✅ Your academy is active and operational.'}
+                    </div>
+                    {academyData.status_notes && (
+                      <div className="mt-2 pt-2 border-t border-current border-opacity-20">
+                        <p className="font-semibold mb-1">Admin Notes:</p>
+                        <p className="whitespace-pre-wrap">{academyData.status_notes}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -568,6 +573,21 @@ const AcademyDashboard = () => {
                   <span className="text-sm text-[#0F1717] leading-[21px]">Analytics</span>
                 </button>
                 
+                <button 
+                  onClick={() => {
+                    setActiveTab('profile');
+                    setShowProfileManagement(true);
+                  }}
+                  className={`flex items-center gap-3 self-stretch px-3 py-2 rounded-lg transition-colors ${
+                    activeTab === 'profile' ? 'bg-[#F0F5F2]' : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M10 9C11.6569 9 13 7.65685 13 6C13 4.34315 11.6569 3 10 3C8.34315 3 7 4.34315 7 6C7 7.65685 8.34315 9 10 9ZM10 11C7.23858 11 5 8.76142 5 6C5 3.23858 7.23858 1 10 1C12.7614 1 15 3.23858 15 6C15 8.76142 12.7614 11 10 11ZM3 19C3 14.5817 6.58172 11 11 11H9C13.4183 11 17 14.5817 17 19C17 19.5523 16.5523 20 16 20H4C3.44772 20 3 19.5523 3 19ZM11 13C7.68629 13 5 15.6863 5 19H15C15 15.6863 12.3137 13 9 13H11Z" fill="#0F1717"/>
+                  </svg>
+                  <span className="text-sm text-[#0F1717] leading-[21px]">Profile</span>
+                </button>
+                
                 <div className="flex items-center gap-3 self-stretch px-3 py-2">
                   <svg width="20" height="21" viewBox="0 0 20 21" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path fillRule="evenodd" clipRule="evenodd" d="M18.25 2.75H10.75V1.25C10.75 0.835786 10.4142 0.5 10 0.5C9.58579 0.5 9.25 0.835786 9.25 1.25V2.75H1.75C0.921573 2.75 0.25 3.42157 0.25 4.25V15.5C0.25 16.3284 0.921573 17 1.75 17H5.44L3.41406 19.5312C3.15518 19.8549 3.20765 20.3271 3.53125 20.5859C3.85485 20.8448 4.32705 20.7924 4.58594 20.4688L7.36 17H12.64L15.4141 20.4688C15.6729 20.7924 16.1451 20.8448 16.4688 20.5859C16.7924 20.3271 16.8448 19.8549 16.5859 19.5312L14.56 17H18.25C19.0784 17 19.75 16.3284 19.75 15.5V4.25C19.75 3.42157 19.0784 2.75 18.25 2.75V2.75ZM18.25 15.5H1.75V4.25H18.25V15.5V15.5ZM7.75 10.25V12.5C7.75 12.9142 7.41421 13.25 7 13.25C6.58579 13.25 6.25 12.9142 6.25 12.5V10.25C6.25 9.83579 6.58579 9.5 7 9.5C7.41421 9.5 7.75 9.83579 7.75 10.25V10.25ZM10.75 8.75V12.5C10.75 12.9142 10.4142 13.25 10 13.25C9.58579 13.25 9.25 12.9142 9.25 12.5V8.75C9.25 8.33579 9.58579 8 10 8C10.4142 8 10.75 8.33579 10.75 8.75V8.75ZM13.75 7.25V12.5C13.75 12.9142 13.4142 13.25 13 13.25C12.5858 13.25 12.25 12.9142 12.25 12.5V7.25C12.25 6.83579 12.5858 6.5 13 6.5C13.4142 6.5 13.75 6.83579 13.75 7.25V7.25Z" fill="#0F1717"/>
@@ -597,6 +617,7 @@ const AcademyDashboard = () => {
                 {activeTab === 'students' && 'Students Management'}
                 {activeTab === 'batches' && 'Batches Management'}
                 {activeTab === 'analytics' && 'Analytics & Performance'}
+                {activeTab === 'profile' && 'Academy Profile Management'}
               </h1>
               <div className="w-[340px] flex flex-col items-start">
                 <p className="text-sm text-[#5E8C7D] leading-[21px] self-stretch">Welcome back, {user?.full_name || 'Academy Owner'}</p>
@@ -873,6 +894,24 @@ const AcademyDashboard = () => {
           )}
 
           {/* Analytics Tab */}
+          {activeTab === 'profile' && academyData && (
+            <div className="flex px-4 py-8 flex-col items-start self-stretch">
+              <AcademyProfileManagement
+                academy={academyData}
+                onSuccess={() => {
+                  // Reload academy data after successful update
+                  fetchAcademyData();
+                  setShowProfileManagement(false);
+                  setActiveTab('overview');
+                }}
+                onCancel={() => {
+                  setShowProfileManagement(false);
+                  setActiveTab('overview');
+                }}
+              />
+            </div>
+          )}
+
           {activeTab === 'analytics' && (
             <div className="flex px-4 flex-col items-start self-stretch">
               <div className="flex p-4 flex-col justify-center items-start gap-4 self-stretch bg-white border border-[#DBE5E0] rounded-xl">

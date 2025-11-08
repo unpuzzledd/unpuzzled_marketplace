@@ -21,14 +21,24 @@ const Home = () => {
   useEffect(() => {
     if (!loading && user) {
       console.log('🏠 Home: User is authenticated, redirecting...')
-      if (user.role === 'student') {
+      
+      // Check if user is admin - only redirect if they have admin session
+      if (user.role === 'admin' || user.role === 'super_admin') {
+        // Check if user has admin session before redirecting to admin dashboard
+        const adminSession = localStorage.getItem('admin_session')
+        if (adminSession) {
+          navigate('/admin')
+        } else {
+          // User has admin role but no admin session - don't redirect, let them stay on home
+          // They can manually navigate to /admin/signin if needed
+          return
+        }
+      } else if (user.role === 'student') {
         navigate('/student')
       } else if (user.role === 'teacher') {
         navigate('/teacher')
       } else if (user.role === 'academy_owner') {
         navigate('/academy')
-      } else if (user.role === 'admin' || user.role === 'super_admin') {
-        navigate('/admin')
       } else if (user.role) {
         navigate('/dashboard')
       } else {

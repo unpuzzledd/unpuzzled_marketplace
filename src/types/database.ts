@@ -6,6 +6,7 @@ export interface Location {
   state: string;
   country: string;
   is_active: boolean;
+  owner_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -24,15 +25,15 @@ export interface Academy {
   name: string;
   phone_number: string;
   owner_id: string;
-  location_id: string | null;
-  status: 'pending' | 'active' | 'suspended';
+  location_ids: string[]; // Array of location IDs
+  skill_ids: string[]; // Array of skill IDs
+  photo_urls: string[]; // Array of photo URLs (max 4)
+  status: 'pending' | 'in_process' | 'approved' | 'rejected' | 'active' | 'suspended' | 'deactivated';
+  status_notes?: string | null; // Admin notes about status changes
   created_at: string;
   updated_at: string;
   // Joined data
-  location?: Location;
   owner?: User;
-  photos?: AcademyPhoto[];
-  skills?: AcademySkill[];
 }
 
 export interface AcademyPhoto {
