@@ -18,8 +18,8 @@ export const AdminAcademyManagement: React.FC<AdminAcademyManagementProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Form states
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  // Form states (only for editing, not creating)
+  const [showEditForm, setShowEditForm] = useState(false);
   const [editingAcademy, setEditingAcademy] = useState<Academy | null>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -66,20 +66,22 @@ export const AdminAcademyManagement: React.FC<AdminAcademyManagementProps> = ({
     return [];
   };
 
-  const handleCreateAcademy = async (e: React.FormEvent) => {
+  const handleUpdateAcademy = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!editingAcademy) return;
+    
     try {
-      const result = await AdminApi.createAcademy(formData);
+      const result = await AdminApi.updateAcademy(editingAcademy.id, formData);
       if (result.data) {
-        setShowCreateForm(false);
+        setShowEditForm(false);
         resetForm();
         loadData();
         onAcademyUpdate?.();
       } else {
-        setError(result.error || 'Failed to create academy');
+        setError(result.error || 'Failed to update academy');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create academy');
+      setError(err instanceof Error ? err.message : 'Failed to update academy');
     }
   };
 
@@ -134,7 +136,7 @@ export const AdminAcademyManagement: React.FC<AdminAcademyManagementProps> = ({
       owner_id: academy.owner_id,
       location_id: academy.location_id || ''
     });
-    setShowCreateForm(true);
+    setShowEditForm(true);
   };
 
   if (loading) {
@@ -149,12 +151,6 @@ export const AdminAcademyManagement: React.FC<AdminAcademyManagementProps> = ({
           <h2 className="text-xl font-semibold">Academy Management</h2>
           <p className="text-gray-600">Manage academies, their status, and details</p>
         </div>
-        <button
-          onClick={() => setShowCreateForm(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          Create Academy
-        </button>
       </div>
 
       {/* Error Display */}
@@ -330,15 +326,15 @@ export const AdminAcademyManagement: React.FC<AdminAcademyManagementProps> = ({
         )}
       </div>
 
-      {/* Create/Edit Modal */}
-      {showCreateForm && (
+      {/* Edit Modal */}
+      {showEditForm && editingAcademy && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <h3 className="text-lg font-semibold mb-4">
-              {editingAcademy ? 'Edit Academy' : 'Create Academy'}
+              Edit Academy
             </h3>
             
-            <form onSubmit={handleCreateAcademy} className="space-y-4">
+            <form onSubmit={handleUpdateAcademy} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Name</label>
                 <input
@@ -400,12 +396,12 @@ export const AdminAcademyManagement: React.FC<AdminAcademyManagementProps> = ({
                   type="submit"
                   className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
                 >
-                  {editingAcademy ? 'Update' : 'Create'}
+                  Update
                 </button>
                 <button
                   type="button"
                   onClick={() => {
-                    setShowCreateForm(false);
+                    setShowEditForm(false);
                     resetForm();
                   }}
                   className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400"

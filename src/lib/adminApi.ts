@@ -132,6 +132,41 @@ export class AdminApi {
     }
   }
 
+  /**
+   * Update academy details (admin only)
+   */
+  static async updateAcademy(
+    academyId: string,
+    updates: {
+      name?: string;
+      phone_number?: string;
+      owner_id?: string;
+      location_id?: string;
+    }
+  ): Promise<ApiResponse<Academy>> {
+    try {
+      const { data, error } = await supabase
+        .from('academies')
+        .update(updates)
+        .eq('id', academyId)
+        .select(`
+          *,
+          location:locations(*),
+          owner:users(*)
+        `)
+        .single();
+
+      if (error) {
+        return { data: null, error: error.message };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update academy';
+      return { data: null, error: errorMessage };
+    }
+  }
+
   // =============================================
   // ACADEMY STATUS WORKFLOW FUNCTIONS
   // =============================================
