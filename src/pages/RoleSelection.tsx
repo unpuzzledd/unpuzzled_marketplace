@@ -14,6 +14,7 @@ const RoleSelection = () => {
     if (!loading && user && user.role) {
       // User already has a role, they should sign in instead
       // This will be handled in the render
+      console.log('User already has role:', user.role)
     }
   }, [user, loading])
 
@@ -31,9 +32,26 @@ const RoleSelection = () => {
   const handleRoleSubmit = async () => {
     if (!selectedRole) return
 
+    // Double-check: Prevent role update if user already has a role
+    if (user && user.role) {
+      alert(`This email is already associated with the role: ${user.role}. Please sign in instead.`)
+      return
+    }
+
     try {
       setIsSubmitting(true)
-      await updateUserRole(selectedRole)
+      const result = await updateUserRole(selectedRole)
+      
+      // Check if update was successful
+      if (!result.success) {
+        // Show error message
+        if (result.error) {
+          alert(result.error)
+        } else {
+          alert('Failed to update role. Please try again or sign in if you already have an account.')
+        }
+        return
+      }
       
       // Redirect based on selected role
       if (selectedRole === 'academy_owner') {
@@ -47,6 +65,7 @@ const RoleSelection = () => {
       }
     } catch (error) {
       console.error('Error updating role:', error)
+      alert('Failed to update role. Please try again or sign in if you already have an account.')
     } finally {
       setIsSubmitting(false)
     }
@@ -86,42 +105,65 @@ const RoleSelection = () => {
 
   // Check if user already exists (has a role)
   if (user && user.role) {
+    const roleDisplayNames: Record<string, string> = {
+      'student': 'Student',
+      'teacher': 'Teacher',
+      'academy_owner': 'Academy Owner',
+      'admin': 'Admin',
+      'super_admin': 'Super Admin'
+    }
+    
+    const roleDisplayName = roleDisplayNames[user.role] || user.role
+    
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
         <div className="max-w-2xl w-full bg-white rounded-lg shadow-lg p-8">
           <div className="text-center mb-8">
-            {/* Info Icon */}
-            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-blue-100 mb-4">
-              <svg className="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            {/* Warning Icon */}
+            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-yellow-100 mb-4">
+              <svg className="h-8 w-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
             
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Account Already Exists
+              Email Already Registered
             </h1>
-            <p className="text-gray-600 mb-4">
-              The email <span className="font-semibold text-gray-900">{user.email}</span> is already registered.
-            </p>
-            <p className="text-gray-600 mb-6">
-              Please sign in to access your account.
-            </p>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+              <p className="text-gray-700 mb-2">
+                The email <span className="font-semibold text-gray-900">{user.email}</span> is already associated with the role:
+              </p>
+              <p className="text-lg font-bold text-yellow-800 mb-2">
+                {roleDisplayName}
+              </p>
+              <p className="text-sm text-gray-600">
+                You cannot sign up again with this email. Please sign in to access your existing account.
+              </p>
+            </div>
           </div>
 
-          <button
-            onClick={handleSignIn}
-            disabled={isSigningIn}
-            className="w-full bg-blue-600 text-white py-3 px-4 rounded-md font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {isSigningIn ? (
-              <div className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                Signing in...
-              </div>
-            ) : (
-              'Proceed to Sign In'
-            )}
-          </button>
+          <div className="space-y-3">
+            <button
+              onClick={handleSignIn}
+              disabled={isSigningIn}
+              className="w-full bg-blue-600 text-white py-3 px-4 rounded-md font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isSigningIn ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  Signing in...
+                </div>
+              ) : (
+                'Sign In to Existing Account'
+              )}
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="w-full bg-gray-200 text-gray-700 py-3 px-4 rounded-md font-medium hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+            >
+              Go Back to Home
+            </button>
+          </div>
         </div>
       </div>
     )

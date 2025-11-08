@@ -43,11 +43,31 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
         console.log('Is admin email:', isAdminEmail(email))
         
         if (isAdminEmail(email)) {
+          const adminRole = email === 'superadmin@unpuzzled.com' ? 'super_admin' : 'admin'
+          
+          // Sync admin role to database
+          const { error: updateError } = await supabase
+            .from('users')
+            .upsert({
+              id: session.user.id,
+              email: email,
+              full_name: session.user.user_metadata?.full_name || 'Admin User',
+              role: adminRole
+            }, {
+              onConflict: 'id'
+            })
+          
+          if (updateError) {
+            console.warn('Could not update admin role in database:', updateError)
+          } else {
+            console.log('✅ Admin role synced to database:', adminRole)
+          }
+          
           const adminUser: AdminUser = {
             id: session.user.id,
             email: email,
             name: session.user.user_metadata?.full_name || 'Admin User',
-            role: email === 'superadmin@unpuzzled.com' ? 'super_admin' : 'admin'
+            role: adminRole
           }
 
           console.log('Setting admin user:', adminUser)

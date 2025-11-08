@@ -14,5 +14,5 @@ export interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   smartLoginWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
-  updateUserRole: (role: 'student' | 'teacher' | 'academy_owner') => Promise<void>;
+  updateUserRole: (role: 'student' | 'teacher' | 'academy_owner') => Promise<{ success: boolean; error?: string }>;
 }

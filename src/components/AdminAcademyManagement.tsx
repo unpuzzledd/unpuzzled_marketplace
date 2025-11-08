@@ -47,14 +47,18 @@ export const AdminAcademyManagement: React.FC<AdminAcademyManagementProps> = ({
         selectedStatus === 'all' ? undefined : selectedStatus
       );
       
+      console.log('Academy response:', academyResponse);
+      
       if (academyResponse.error) {
         console.error('Error loading academies:', academyResponse.error);
         setError(academyResponse.error);
-        return;
+        setAcademies([]);
+        setTotalPages(0);
+      } else {
+        console.log('Academies loaded:', academyResponse.data?.length || 0);
+        setAcademies(academyResponse.data || []);
+        setTotalPages(academyResponse.totalPages || 0);
       }
-      
-      setAcademies(academyResponse.data || []);
-      setTotalPages(academyResponse.totalPages);
 
       // Load locations and users for forms
       const [locationsData, usersData] = await Promise.all([
@@ -66,6 +70,8 @@ export const AdminAcademyManagement: React.FC<AdminAcademyManagementProps> = ({
     } catch (err) {
       console.error('Error in loadData:', err);
       setError(err instanceof Error ? err.message : 'Failed to load data');
+      setAcademies([]);
+      setTotalPages(0);
     } finally {
       setLoading(false);
     }
@@ -199,32 +205,42 @@ export const AdminAcademyManagement: React.FC<AdminAcademyManagementProps> = ({
 
       {/* Academies List */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Academy
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Owner
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Location
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Created
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {academies.map((academy) => (
+        {academies.length === 0 && !loading ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500 text-lg">No academies found</p>
+            <p className="text-gray-400 text-sm mt-2">
+              {selectedStatus === 'all' 
+                ? 'There are no academies in the system yet.' 
+                : `No academies with status "${selectedStatus}" found.`}
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Academy
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Owner
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Location
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Created
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {academies.map((academy) => (
                 <tr key={academy.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
@@ -311,10 +327,11 @@ export const AdminAcademyManagement: React.FC<AdminAcademyManagementProps> = ({
                     </button>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* Pagination */}
         {totalPages > 1 && (

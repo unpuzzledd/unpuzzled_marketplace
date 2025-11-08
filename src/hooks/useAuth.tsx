@@ -239,11 +239,58 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Note: Don't set loading to false in finally as we're navigating away
   }
 
-  const updateUserRole = async (role: 'student' | 'teacher' | 'academy_owner') => {
-    if (!user) return
+  const updateUserRole = async (role: 'student' | 'teacher' | 'academy_owner'): Promise<{ success: boolean; error?: string }> => {
+    if (!user) {
+      return { success: false, error: 'User not found' }
+    }
+
+    // Check if user already has a role
+    if (user.role) {
+      const roleDisplayNames: Record<string, string> = {
+        'student': 'Student',
+        'teacher': 'Teacher',
+        'academy_owner': 'Academy Owner',
+        'admin': 'Admin',
+        'super_admin': 'Super Admin'
+      }
+      const existingRole = roleDisplayNames[user.role] || user.role
+      return { 
+        success: false, 
+        error: `This email is already associated with the role: ${existingRole}. Please sign in to access your existing account.` 
+      }
+    }
 
     try {
       setLoading(true)
+      
+      // Double-check in database to ensure role is not set
+      const { data: currentUser, error: fetchError } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      if (fetchError) {
+        console.error('Error fetching user:', fetchError)
+        return { success: false, error: 'Failed to verify user account' }
+      }
+
+      if (currentUser?.role) {
+        const roleDisplayNames: Record<string, string> = {
+          'student': 'Student',
+          'teacher': 'Teacher',
+          'academy_owner': 'Academy Owner',
+          'admin': 'Admin',
+          'super_admin': 'Super Admin'
+        }
+        const existingRole = roleDisplayNames[currentUser.role] || currentUser.role
+        return { 
+          success: false, 
+          error: `This email is already associated with the role: ${existingRole}. Please sign in to access your existing account.` 
+        }
+      }
+
+      // Update role
       const { data, error } = await supabase
         .from('users')
         .update({ role })
@@ -251,12 +298,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        console.error('Error updating user role:', error)
+        return { success: false, error: error.message }
+      }
 
       setUser(data)
+      return { success: true }
     } catch (error) {
       console.error('Error updating user role:', error)
-      alert('Error updating role. Please try again.')
+      const errorMessage = error instanceof Error ? error.message : 'Error updating role. Please try again.'
+      return { success: false, error: errorMessage }
     } finally {
       setLoading(false)
     }
