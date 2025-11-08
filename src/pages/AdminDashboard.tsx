@@ -5,7 +5,6 @@ import { AdminApi } from '../lib/adminApi'
 import { AdminAcademyManagement } from '../components/AdminAcademyManagement'
 import { AdminLocationManagement } from '../components/AdminLocationManagement'
 import { AdminSkillManagement } from '../components/AdminSkillManagement'
-import { AdminApprovalWorkflows } from '../components/AdminApprovalWorkflows'
 import { AdminPhotoApproval } from '../components/AdminPhotoApproval'
 
 const AdminDashboard = () => {
@@ -25,7 +24,12 @@ const AdminDashboard = () => {
       console.log('Not authenticated, redirecting to signin')
       navigate('/admin/signin')
     }
-  }, [isAuthenticated, loading, navigate])
+    
+    // Redirect from approvals page if user is on it (since we removed the tab)
+    if (currentPage === 'approvals') {
+      setCurrentPage('dashboard')
+    }
+  }, [isAuthenticated, loading, navigate, currentPage])
 
   // Load dashboard data when authenticated
   useEffect(() => {
@@ -204,10 +208,6 @@ const AdminDashboard = () => {
     <AdminSkillManagement onSkillUpdate={handleDataUpdate} />
   )
 
-  const renderApprovals = () => (
-    <AdminApprovalWorkflows onApprovalComplete={handleDataUpdate} />
-  )
-
   const renderPhotos = () => (
     <AdminPhotoApproval onApprovalComplete={handleDataUpdate} />
   )
@@ -218,7 +218,6 @@ const AdminDashboard = () => {
       case 'academies': return renderAcademies()
       case 'locations': return renderLocations()
       case 'skills': return renderSkills()
-      case 'approvals': return renderApprovals()
       case 'photos': return renderPhotos()
       default: return renderDashboard()
     }
@@ -289,16 +288,6 @@ const AdminDashboard = () => {
               }`}
             >
               Skills
-            </button>
-            <button
-              onClick={() => setCurrentPage('approvals')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                currentPage === 'approvals'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Approvals
             </button>
             <button
               onClick={() => setCurrentPage('photos')}
