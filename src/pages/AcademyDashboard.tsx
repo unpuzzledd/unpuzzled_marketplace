@@ -31,7 +31,6 @@ const AcademyDashboard = () => {
   const [dataLoading, setDataLoading] = useState(true)
   const [dataError, setDataError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'overview' | 'teachers' | 'students' | 'batches' | 'analytics' | 'profile'>('overview')
-  const [showProfileManagement, setShowProfileManagement] = useState(false)
   
   // Teacher management modal state
   const [showTeacherModal, setShowTeacherModal] = useState(false)
@@ -576,7 +575,6 @@ const AcademyDashboard = () => {
                 <button 
                   onClick={() => {
                     setActiveTab('profile');
-                    setShowProfileManagement(true);
                   }}
                   className={`flex items-center gap-3 self-stretch px-3 py-2 rounded-lg transition-colors ${
                     activeTab === 'profile' ? 'bg-[#F0F5F2]' : 'hover:bg-gray-50'
@@ -901,11 +899,9 @@ const AcademyDashboard = () => {
                 onSuccess={() => {
                   // Reload academy data after successful update
                   fetchAcademyData();
-                  setShowProfileManagement(false);
                   setActiveTab('overview');
                 }}
                 onCancel={() => {
-                  setShowProfileManagement(false);
                   setActiveTab('overview');
                 }}
               />

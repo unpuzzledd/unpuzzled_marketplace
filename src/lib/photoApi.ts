@@ -49,18 +49,14 @@ export class PhotoApi {
       console.log('Storage upload result:', { uploadData, uploadError });
 
       if (uploadError) {
-        console.error('Storage upload error:', {
-          message: uploadError.message,
-          statusCode: uploadError.statusCode,
-          error: uploadError.error
-        });
+        console.error('Storage upload error:', uploadError);
         onProgress?.({
           file,
           progress: 0,
           status: 'error',
-          error: uploadError.message
+          error: uploadError.message || 'Failed to upload photo'
         });
-        return { success: false, error: uploadError.message };
+        return { success: false, error: uploadError.message || 'Failed to upload photo' };
       }
 
       // Get public URL
@@ -210,7 +206,8 @@ export class PhotoApi {
 
       // Extract file path from URL
       const url = new URL(photoUrl);
-      const filePath = url.pathname.split('/').slice(-2).join('/'); // Get academy_id/filename
+      const pathParts = url.pathname.split('/').slice(-2);
+      const filePath = pathParts.join('/'); // Get academy_id/filename
 
       // Delete from storage
       const { error: storageError } = await supabase.storage
@@ -222,7 +219,7 @@ export class PhotoApi {
       }
 
       // Remove URL from array
-      const updatedPhotoUrls = photoUrls.filter(url => url !== photoUrl);
+      const updatedPhotoUrls = photoUrls.filter((url: string) => url !== photoUrl);
       const { error: updateError } = await supabase
         .from('academies')
         .update({ photo_urls: updatedPhotoUrls })

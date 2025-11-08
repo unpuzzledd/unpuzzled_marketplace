@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AcademyApi } from '../lib/academyApi';
 import { Location, Skill, Academy } from '../types/database';
-import { PhotoApi } from '../lib/photoApi';
 
 interface AcademyProfileManagementProps {
   academy: Academy;

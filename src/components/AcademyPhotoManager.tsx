@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { PhotoApi } from '../lib/photoApi';
-import { AcademyPhoto } from '../types/database';
 import { PhotoUpload } from './PhotoUpload';
 import { PhotoGallery } from './PhotoGallery';
 import { 
@@ -14,7 +13,7 @@ interface AcademyPhotoManagerProps {
   academyId: string;
   canEdit?: boolean;
   showStatus?: boolean;
-  onPhotosChange?: (photos: AcademyPhoto[]) => void;
+  onPhotosChange?: (photos: string[]) => void;
 }
 
 export const AcademyPhotoManager: React.FC<AcademyPhotoManagerProps> = ({
@@ -23,7 +22,7 @@ export const AcademyPhotoManager: React.FC<AcademyPhotoManagerProps> = ({
   showStatus = false,
   onPhotosChange
 }) => {
-  const [photos, setPhotos] = useState<AcademyPhoto[]>([]);
+  const [photos, setPhotos] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,9 +34,9 @@ export const AcademyPhotoManager: React.FC<AcademyPhotoManagerProps> = ({
     try {
       setLoading(true);
       setError(null);
-      const academyPhotos = await PhotoApi.getAcademyPhotos(academyId);
-      setPhotos(academyPhotos);
-      onPhotosChange?.(academyPhotos);
+      const photoUrls = await PhotoApi.getAcademyPhotos(academyId);
+      setPhotos(photoUrls);
+      onPhotosChange?.(photoUrls);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load photos';
       setError(errorMessage);
@@ -48,7 +47,7 @@ export const AcademyPhotoManager: React.FC<AcademyPhotoManagerProps> = ({
   };
 
   const handleUploadComplete = (_photoUrl: string) => {
-    // Reload photos to get the new photo with proper metadata
+    // Reload photos to get the new photo
     loadPhotos();
   };
 
@@ -58,12 +57,12 @@ export const AcademyPhotoManager: React.FC<AcademyPhotoManagerProps> = ({
     setTimeout(() => setError(null), 5000);
   };
 
-  const handleDeletePhoto = async (photoId: string) => {
+  const handleDeletePhoto = async (photoUrl: string) => {
     try {
-      const result = await PhotoApi.deletePhoto(photoId);
+      const result = await PhotoApi.deletePhoto(academyId, photoUrl);
       if (result.success) {
-        setPhotos(prev => prev.filter(p => p.id !== photoId));
-        onPhotosChange?.(photos.filter(p => p.id !== photoId));
+        setPhotos(prev => prev.filter(url => url !== photoUrl));
+        onPhotosChange?.(photos.filter(url => url !== photoUrl));
       } else {
         setError(result.error || 'Failed to delete photo');
       }
@@ -73,9 +72,9 @@ export const AcademyPhotoManager: React.FC<AcademyPhotoManagerProps> = ({
     }
   };
 
-  const handleReorderPhotos = async (photoId: string, newOrder: number) => {
+  const handleReorderPhotos = async (photoUrls: string[]) => {
     try {
-      const result = await PhotoApi.updatePhotoOrder(photoId, newOrder);
+      const result = await PhotoApi.updatePhotoOrder(academyId, photoUrls);
       if (result.success) {
         // Reload photos to get updated order
         loadPhotos();
@@ -89,11 +88,9 @@ export const AcademyPhotoManager: React.FC<AcademyPhotoManagerProps> = ({
   };
 
   const getStatusSummary = () => {
-    const approved = photos.filter(p => p.status === 'approved').length;
-    const pending = photos.filter(p => p.status === 'pending').length;
-    const rejected = photos.filter(p => p.status === 'rejected').length;
-
-    return { approved, pending, rejected };
+    // Photos are now just URLs, no status tracking
+    // Return empty summary since status is no longer tracked per photo
+    return { approved: photos.length, pending: 0, rejected: 0 };
   };
 
   const statusSummary = getStatusSummary();

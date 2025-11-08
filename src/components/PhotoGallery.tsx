@@ -1,18 +1,14 @@
 import React, { useState } from 'react';
-import { AcademyPhoto } from '../types/database';
 import { 
   EyeIcon, 
   TrashIcon, 
-  // PencilIcon,
-  CheckCircleIcon,
-  ClockIcon,
   XCircleIcon
 } from '@heroicons/react/24/outline';
 
 interface PhotoGalleryProps {
-  photos: AcademyPhoto[];
-  onDeletePhoto?: (photoId: string) => void;
-  onReorderPhotos?: (photoId: string, newOrder: number) => void;
+  photos: string[];
+  onDeletePhoto?: (photoUrl: string) => void;
+  onReorderPhotos?: (photoUrls: string[]) => void;
   canEdit?: boolean;
   showStatus?: boolean;
 }
@@ -21,44 +17,17 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({
   photos,
   onDeletePhoto,
   onReorderPhotos,
-  canEdit = false,
-  showStatus = false
+  canEdit = false
 }) => {
-  const [selectedPhoto, setSelectedPhoto] = useState<AcademyPhoto | null>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [draggedPhoto, setDraggedPhoto] = useState<string | null>(null);
 
-  // Sort photos by display order
-  const sortedPhotos = [...photos].sort((a, b) => a.display_order - b.display_order);
+  // Photos are now just URLs, maintain order as-is
+  const sortedPhotos = [...photos];
 
-  const getStatusIcon = (status: AcademyPhoto['status']) => {
-    switch (status) {
-      case 'approved':
-        return <CheckCircleIcon className="h-4 w-4 text-green-500" />;
-      case 'pending':
-        return <ClockIcon className="h-4 w-4 text-yellow-500" />;
-      case 'rejected':
-        return <XCircleIcon className="h-4 w-4 text-red-500" />;
-      default:
-        return null;
-    }
-  };
-
-  const getStatusText = (status: AcademyPhoto['status']) => {
-    switch (status) {
-      case 'approved':
-        return 'Approved';
-      case 'pending':
-        return 'Pending Approval';
-      case 'rejected':
-        return 'Rejected';
-      default:
-        return '';
-    }
-  };
-
-  const handleDragStart = (e: React.DragEvent, photoId: string) => {
+  const handleDragStart = (e: React.DragEvent, photoUrl: string) => {
     if (!canEdit || !onReorderPhotos) return;
-    setDraggedPhoto(photoId);
+    setDraggedPhoto(photoUrl);
     e.dataTransfer.effectAllowed = 'move';
   };
 
@@ -67,23 +36,27 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({
     e.dataTransfer.dropEffect = 'move';
   };
 
-  const handleDrop = (e: React.DragEvent, targetPhotoId: string) => {
+  const handleDrop = (e: React.DragEvent, targetPhotoUrl: string) => {
     e.preventDefault();
-    if (!draggedPhoto || !onReorderPhotos || draggedPhoto === targetPhotoId) return;
+    if (!draggedPhoto || !onReorderPhotos || draggedPhoto === targetPhotoUrl) return;
 
-    const draggedIndex = sortedPhotos.findIndex(p => p.id === draggedPhoto);
-    const targetIndex = sortedPhotos.findIndex(p => p.id === targetPhotoId);
+    const draggedIndex = sortedPhotos.findIndex(url => url === draggedPhoto);
+    const targetIndex = sortedPhotos.findIndex(url => url === targetPhotoUrl);
     
     if (draggedIndex === -1 || targetIndex === -1) return;
 
-    const newOrder = targetIndex + 1;
-    onReorderPhotos(draggedPhoto, newOrder);
+    // Reorder array
+    const newPhotos = [...sortedPhotos];
+    const [removed] = newPhotos.splice(draggedIndex, 1);
+    newPhotos.splice(targetIndex, 0, removed);
+    
+    onReorderPhotos(newPhotos);
     setDraggedPhoto(null);
   };
 
-  const handleDelete = (photoId: string) => {
+  const handleDelete = (photoUrl: string) => {
     if (onDeletePhoto && window.confirm('Are you sure you want to delete this photo?')) {
-      onDeletePhoto(photoId);
+      onDeletePhoto(photoUrl);
     }
   };
 
@@ -98,23 +71,23 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({
   return (
     <>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {sortedPhotos.map((photo) => (
+        {sortedPhotos.map((photoUrl, index) => (
           <div
-            key={photo.id}
+            key={photoUrl}
             className={`
               relative group rounded-lg overflow-hidden bg-gray-100 aspect-square
               ${canEdit && onReorderPhotos ? 'cursor-move' : 'cursor-pointer'}
-              ${draggedPhoto === photo.id ? 'opacity-50' : ''}
+              ${draggedPhoto === photoUrl ? 'opacity-50' : ''}
             `}
             draggable={canEdit && !!onReorderPhotos}
-            onDragStart={(e) => handleDragStart(e, photo.id)}
+            onDragStart={(e) => handleDragStart(e, photoUrl)}
             onDragOver={handleDragOver}
-            onDrop={(e) => handleDrop(e, photo.id)}
-            onClick={() => setSelectedPhoto(photo)}
+            onDrop={(e) => handleDrop(e, photoUrl)}
+            onClick={() => setSelectedPhoto(photoUrl)}
           >
             <img
-              src={photo.photo_url}
-              alt={`Academy photo ${photo.display_order}`}
+              src={photoUrl}
+              alt={`Academy photo ${index + 1}`}
               className="w-full h-full object-cover"
               loading="lazy"
             />
@@ -125,7 +98,7 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setSelectedPhoto(photo);
+                    setSelectedPhoto(photoUrl);
                   }}
                   className="p-2 bg-white bg-opacity-90 rounded-full hover:bg-opacity-100 transition-all"
                   title="View photo"
@@ -137,7 +110,7 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDelete(photo.id);
+                      handleDelete(photoUrl);
                     }}
                     className="p-2 bg-white bg-opacity-90 rounded-full hover:bg-opacity-100 transition-all"
                     title="Delete photo"
@@ -148,19 +121,9 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({
               </div>
             </div>
 
-            {/* Status Badge */}
-            {showStatus && (
-              <div className="absolute top-2 left-2 flex items-center space-x-1 bg-white bg-opacity-90 rounded-full px-2 py-1">
-                {getStatusIcon(photo.status)}
-                <span className="text-xs font-medium text-gray-700">
-                  {getStatusText(photo.status)}
-                </span>
-              </div>
-            )}
-
             {/* Order Badge */}
             <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center">
-              {photo.display_order}
+              {index + 1}
             </div>
           </div>
         ))}
@@ -178,28 +141,22 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({
             </button>
             
             <img
-              src={selectedPhoto.photo_url}
-              alt={`Academy photo ${selectedPhoto.display_order}`}
+              src={selectedPhoto}
+              alt="Academy photo"
               className="max-w-full max-h-full object-contain rounded-lg"
             />
             
             <div className="absolute bottom-4 left-4 right-4 bg-black bg-opacity-70 text-white p-4 rounded-lg">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium">Photo {selectedPhoto.display_order}</p>
-                  {showStatus && (
-                    <div className="flex items-center space-x-2 mt-1">
-                      {getStatusIcon(selectedPhoto.status)}
-                      <span className="text-sm">{getStatusText(selectedPhoto.status)}</span>
-                    </div>
-                  )}
+                  <p className="font-medium">Photo {sortedPhotos.indexOf(selectedPhoto) + 1}</p>
                 </div>
                 
                 <div className="flex space-x-2">
                   {canEdit && onDeletePhoto && (
                     <button
                       onClick={() => {
-                        handleDelete(selectedPhoto.id);
+                        handleDelete(selectedPhoto);
                         setSelectedPhoto(null);
                       }}
                       className="flex items-center space-x-1 px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm transition-colors"

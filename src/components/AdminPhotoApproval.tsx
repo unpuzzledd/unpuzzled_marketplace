@@ -1,13 +1,31 @@
 import React, { useState, useEffect } from 'react';
+import { AdminApi } from '../lib/adminApi';
 import { PhotoApi } from '../lib/photoApi';
-import { AcademyPhoto } from '../types/database';
 import { 
   CheckCircleIcon, 
   XCircleIcon, 
   EyeIcon,
   ClockIcon,
-  // ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
+
+interface PendingPhoto {
+  id: string;
+  academy_id: string;
+  photo_url: string;
+  display_order: number;
+  status: 'pending';
+  academies: {
+    id: string;
+    name: string;
+    owner_id: string;
+    status: string;
+    owner?: {
+      id: string;
+      email: string;
+      full_name: string;
+    };
+  };
+}
 
 interface AdminPhotoApprovalProps {
   onApprovalComplete?: () => void;
@@ -16,10 +34,10 @@ interface AdminPhotoApprovalProps {
 export const AdminPhotoApproval: React.FC<AdminPhotoApprovalProps> = ({
   onApprovalComplete
 }) => {
-  const [pendingPhotos, setPendingPhotos] = useState<AcademyPhoto[]>([]);
+  const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<string | null>(null);
-  const [selectedPhoto, setSelectedPhoto] = useState<AcademyPhoto | null>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<PendingPhoto | null>(null);
 
   useEffect(() => {
     loadPendingPhotos();
@@ -28,8 +46,8 @@ export const AdminPhotoApproval: React.FC<AdminPhotoApprovalProps> = ({
   const loadPendingPhotos = async () => {
     try {
       setLoading(true);
-      const photos = await PhotoApi.getPendingPhotos();
-      setPendingPhotos(photos);
+      const photos = await AdminApi.getPendingPhotos();
+      setPendingPhotos(photos as PendingPhoto[]);
     } catch (error) {
       console.error('Error loading pending photos:', error);
     } finally {
@@ -37,59 +55,17 @@ export const AdminPhotoApproval: React.FC<AdminPhotoApprovalProps> = ({
     }
   };
 
-  const handleApprove = async (photoId: string) => {
-    try {
-      setProcessing(photoId);
-      const result = await PhotoApi.updatePhotoStatus(photoId, 'approved');
-      
-      if (result.success) {
-        setPendingPhotos(prev => prev.filter(p => p.id !== photoId));
-        onApprovalComplete?.();
-      } else {
-        alert(`Failed to approve photo: ${result.error}`);
-      }
-    } catch (error) {
-      console.error('Error approving photo:', error);
-      alert('Failed to approve photo');
-    } finally {
-      setProcessing(null);
-    }
-  };
-
-  const handleReject = async (photoId: string) => {
-    if (!window.confirm('Are you sure you want to reject this photo?')) {
-      return;
-    }
-
-    try {
-      setProcessing(photoId);
-      const result = await PhotoApi.updatePhotoStatus(photoId, 'rejected');
-      
-      if (result.success) {
-        setPendingPhotos(prev => prev.filter(p => p.id !== photoId));
-        onApprovalComplete?.();
-      } else {
-        alert(`Failed to reject photo: ${result.error}`);
-      }
-    } catch (error) {
-      console.error('Error rejecting photo:', error);
-      alert('Failed to reject photo');
-    } finally {
-      setProcessing(null);
-    }
-  };
-
-  const handleDelete = async (photoId: string) => {
+  const handleDelete = async (photo: PendingPhoto) => {
     if (!window.confirm('Are you sure you want to delete this photo? This action cannot be undone.')) {
       return;
     }
 
     try {
-      setProcessing(photoId);
-      const result = await PhotoApi.deletePhoto(photoId);
+      setProcessing(photo.id);
+      const result = await PhotoApi.deletePhoto(photo.academy_id, photo.photo_url);
       
       if (result.success) {
-        setPendingPhotos(prev => prev.filter(p => p.id !== photoId));
+        setPendingPhotos(prev => prev.filter(p => p.id !== photo.id));
         onApprovalComplete?.();
       } else {
         alert(`Failed to delete photo: ${result.error}`);
@@ -176,30 +152,10 @@ export const AdminPhotoApproval: React.FC<AdminPhotoApprovalProps> = ({
                 </button>
               </div>
 
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => handleApprove(photo.id)}
-                  disabled={processing === photo.id}
-                  className="flex-1 flex items-center justify-center space-x-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  <CheckCircleIcon className="h-4 w-4" />
-                  <span>Approve</span>
-                </button>
-                
-                <button
-                  onClick={() => handleReject(photo.id)}
-                  disabled={processing === photo.id}
-                  className="flex-1 flex items-center justify-center space-x-2 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  <XCircleIcon className="h-4 w-4" />
-                  <span>Reject</span>
-                </button>
-              </div>
-
               <button
-                onClick={() => handleDelete(photo.id)}
+                onClick={() => handleDelete(photo)}
                 disabled={processing === photo.id}
-                className="w-full mt-2 px-3 py-2 text-red-600 border border-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full px-3 py-2 text-red-600 border border-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Delete Photo
               </button>
@@ -244,26 +200,14 @@ export const AdminPhotoApproval: React.FC<AdminPhotoApprovalProps> = ({
                 <div className="flex space-x-2">
                   <button
                     onClick={() => {
-                      handleApprove(selectedPhoto.id);
-                      setSelectedPhoto(null);
-                    }}
-                    disabled={processing === selectedPhoto.id}
-                    className="flex items-center space-x-1 px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm transition-colors disabled:opacity-50"
-                  >
-                    <CheckCircleIcon className="h-4 w-4" />
-                    <span>Approve</span>
-                  </button>
-                  
-                  <button
-                    onClick={() => {
-                      handleReject(selectedPhoto.id);
+                      handleDelete(selectedPhoto);
                       setSelectedPhoto(null);
                     }}
                     disabled={processing === selectedPhoto.id}
                     className="flex items-center space-x-1 px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm transition-colors disabled:opacity-50"
                   >
                     <XCircleIcon className="h-4 w-4" />
-                    <span>Reject</span>
+                    <span>Delete</span>
                   </button>
                 </div>
               </div>

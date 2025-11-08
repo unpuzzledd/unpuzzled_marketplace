@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AcademyApi } from '../lib/academyApi';
 import { Location, Skill } from '../types/database';
-import { PhotoApi } from '../lib/photoApi';
 
 interface AcademySetupFormProps {
   onSuccess?: () => void;
