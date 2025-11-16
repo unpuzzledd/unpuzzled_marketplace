@@ -537,7 +537,7 @@ const StudentAcademySearch = () => {
       </main>
 
       {/* Academy Detail Modal */}
-      {selectedAcademy && user && (
+      {selectedAcademy && user && (user.role === 'student' || user.role === 'teacher') && (
         <StudentAcademyDetailModal
           isOpen={!!selectedAcademy}
           onClose={handleCloseModal}

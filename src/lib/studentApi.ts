@@ -941,7 +941,7 @@ export class StudentApi {
         : { data: [] }
 
       // Get available batches (active and future end_date)
-      const { data: batches, error: batchesError } = await supabase
+      const { data: batches } = await supabase
         .from('batches')
         .select(`
           *,

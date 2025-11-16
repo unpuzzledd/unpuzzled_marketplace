@@ -16,6 +16,8 @@ interface BatchManagementModalProps {
     academy_id: string;
     max_students?: number;
     status: string;
+    start_date?: string;
+    end_date?: string;
     skill?: {
       id: string;
       name: string;
