@@ -147,10 +147,19 @@ const StudentDashboard = () => {
     )
   }
 
-  // Filter batches by selected course
+  // Filter batches by selected course and enrollment status
+  // Only show active enrollments in main list
+  const activeBatches = batches.filter(b => b.enrollment_status === 'active')
   const filteredBatches = selectedCourse === 'all' 
-    ? batches 
-    : batches.filter(b => b.skill?.id === selectedCourse)
+    ? activeBatches 
+    : activeBatches.filter(b => b.skill?.id === selectedCourse)
+  
+  // Get pending and rejected enrollments separately
+  const pendingEnrollments = batches.filter(b => b.enrollment_status === 'pending')
+  const rejectedEnrollments = batches.filter(b => b.enrollment_status === 'rejected')
+  
+  // Show "Browse Academies" if user has no active enrollments OR has pending/rejected enrollments
+  const shouldShowBrowseAcademies = activeBatches.length === 0 || pendingEnrollments.length > 0 || rejectedEnrollments.length > 0
 
   return (
     <div className="flex flex-col w-full min-h-screen bg-white font-lexend">
@@ -179,7 +188,12 @@ const StudentDashboard = () => {
             >
               Courses
             </button>
-            <button className="text-[#0F1717] text-sm font-normal">Community</button>
+            <button 
+              onClick={() => navigate('/student/search')} 
+              className="text-[#0F1717] text-sm font-normal hover:text-[#009963] transition-colors"
+            >
+              Browse Academies
+            </button>
             <button className="text-[#0F1717] text-sm font-normal">Announcements</button>
           </nav>
 
@@ -303,13 +317,43 @@ const StudentDashboard = () => {
                 </h2>
                 
                 <div className="flex flex-col gap-3.5 overflow-y-auto">
-                  {activities.length === 0 ? (
+                  {/* Show Browse Academies if user has no enrollments or has pending/rejected */}
+                  {shouldShowBrowseAcademies && (
+                    <div className="flex items-center justify-between px-3 py-2 bg-[#F0F5F2] rounded-lg border border-[#009963]">
+                      <div className="flex flex-col gap-1 flex-1">
+                        <div className="text-base leading-7 text-[#121212] font-semibold">
+                          Browse Academies
+                        </div>
+                        <div className="text-sm leading-4 text-[#5E8C7D]">
+                          {activeBatches.length === 0 
+                            ? 'Start your learning journey by exploring available academies'
+                            : pendingEnrollments.length > 0
+                            ? `${pendingEnrollments.length} enrollment request${pendingEnrollments.length > 1 ? 's' : ''} pending approval`
+                            : rejectedEnrollments.length > 0
+                            ? `${rejectedEnrollments.length} enrollment${rejectedEnrollments.length > 1 ? 's' : ''} rejected. Browse more academies`
+                            : 'Explore more academies and courses'}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => navigate('/student/search')}
+                        className="flex-shrink-0 px-4 py-2 bg-[#009963] text-white text-sm font-medium rounded-lg hover:bg-[#007a4f] transition-colors"
+                        title="Browse Academies"
+                      >
+                        Browse
+                      </button>
+                    </div>
+                  )}
+                  
+                  {activities.length === 0 && !shouldShowBrowseAcademies ? (
                     <div className="flex justify-center items-center py-8 text-[#5E8C7D] text-sm">
                       No upcoming activities
                     </div>
                   ) : (
                     activities.map((activity, index) => (
                       <div key={activity.id}>
+                        {shouldShowBrowseAcademies && index === 0 && (
+                          <div className="w-full h-[1.344px] bg-[#ECECEC] my-3.5" />
+                        )}
                         <div className="flex justify-between items-center px-3">
                           <div className="flex flex-col gap-1 flex-1">
                             <div className="text-base leading-7 text-[#121212] opacity-70">
@@ -344,6 +388,29 @@ const StudentDashboard = () => {
               </div>
             </div>
           </div>
+
+          {/* Pending Enrollments */}
+          {pendingEnrollments.length > 0 && (
+            <div className="px-3 mx-3 mb-4">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                <h3 className="text-lg font-bold text-yellow-900 mb-2">
+                  Pending Enrollment Requests ({pendingEnrollments.length})
+                </h3>
+                <div className="space-y-2">
+                  {pendingEnrollments.map((enrollment) => (
+                    <div key={enrollment.id} className="flex items-center justify-between text-sm">
+                      <span className="text-yellow-800">
+                        {enrollment.name} - {enrollment.academy?.name}
+                      </span>
+                      <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">
+                        Pending Approval
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Topics Covered */}
           <div className="flex flex-col mt-3">

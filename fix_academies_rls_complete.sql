@@ -108,3 +108,4 @@ AND (role IS NULL OR role != 'super_admin');
 -- 4. Academy owners can see and update their own academies
 -- 5. The is_admin() function returns true for admin users
 
+

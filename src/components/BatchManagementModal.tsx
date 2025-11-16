@@ -44,7 +44,9 @@ export const BatchManagementModal: React.FC<BatchManagementModalProps> = ({
     skill_id: '',
     teacher_id: '',
     max_students: 20,
-    status: 'active'
+    status: 'active',
+    start_date: '',
+    end_date: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,20 +69,29 @@ export const BatchManagementModal: React.FC<BatchManagementModalProps> = ({
         setEditedBatch({
           name: batch.name,
           skill_id: batch.skill_id,
-          teacher_id: batch.teacher_id,
+          teacher_id: batch.teacher_id || '',
           max_students: batch.max_students || 20,
-          status: batch.status
+          status: batch.status,
+          start_date: batch.start_date ? batch.start_date.split('T')[0] : '',
+          end_date: batch.end_date ? batch.end_date.split('T')[0] : ''
         });
         setIsCreating(false);
         setIsEditing(false);
       } else {
         setIsCreating(true);
+        // Set default dates: start_date = today, end_date = 3 months from today
+        const today = new Date();
+        const threeMonthsLater = new Date();
+        threeMonthsLater.setMonth(today.getMonth() + 3);
+        
         setEditedBatch({
           name: '',
           skill_id: '',
           teacher_id: '',
           max_students: 20,
-          status: 'active'
+          status: 'active',
+          start_date: today.toISOString().split('T')[0],
+          end_date: threeMonthsLater.toISOString().split('T')[0]
         });
       }
       loadBatchData();
@@ -132,34 +143,65 @@ export const BatchManagementModal: React.FC<BatchManagementModalProps> = ({
   };
 
   const handleSave = async () => {
+    // Validate required fields
+    if (!editedBatch.name || !editedBatch.skill_id || !editedBatch.start_date || !editedBatch.end_date) {
+      setError('Please fill in all required fields (Batch Name, Skill, Start Date, and End Date)');
+      return;
+    }
+
+    // Validate dates
+    const startDate = new Date(editedBatch.start_date);
+    const endDate = new Date(editedBatch.end_date);
+    if (endDate <= startDate) {
+      setError('End date must be after start date');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
       if (isCreating) {
-        // Create new batch
-        const { error } = await AdminApi.createBatch({
-          name: editedBatch.name,
+        // Create new batch - teacher_id is optional
+        const batchData: any = {
+          name: editedBatch.name.trim(),
           skill_id: editedBatch.skill_id,
-          teacher_id: editedBatch.teacher_id,
           academy_id: academyId,
           max_students: editedBatch.max_students,
-          status: editedBatch.status
-        });
+          status: editedBatch.status,
+          start_date: editedBatch.start_date,
+          end_date: editedBatch.end_date
+        };
+        
+        // Only include teacher_id if it's provided
+        if (editedBatch.teacher_id) {
+          batchData.teacher_id = editedBatch.teacher_id;
+        }
+        
+        const { error } = await AdminApi.createBatch(batchData);
 
         if (error) {
           setError(error);
+          setLoading(false);
           return;
         }
       } else {
-        // Update existing batch
-        const { error } = await AdminApi.updateBatch(batch!.id, {
-          name: editedBatch.name,
+        // Update existing batch - teacher_id can be empty string to clear it
+        const updateData: any = {
+          name: editedBatch.name.trim(),
           skill_id: editedBatch.skill_id,
-          teacher_id: editedBatch.teacher_id,
           max_students: editedBatch.max_students,
-          status: editedBatch.status
-        });
+          status: editedBatch.status,
+          start_date: editedBatch.start_date,
+          end_date: editedBatch.end_date
+        };
+        
+        // Include teacher_id if it's provided (even if empty string to clear it)
+        if (editedBatch.teacher_id !== undefined) {
+          updateData.teacher_id = editedBatch.teacher_id || '';
+        }
+        
+        const { error } = await AdminApi.updateBatch(batch!.id, updateData);
 
         if (error) {
           setError(error);
@@ -388,20 +430,47 @@ export const BatchManagementModal: React.FC<BatchManagementModalProps> = ({
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-[#0F1717] mb-2">
-                      Teacher *
+                      Teacher
                     </label>
                     <select
                       value={editedBatch.teacher_id}
                       onChange={(e) => setEditedBatch(prev => ({ ...prev, teacher_id: e.target.value }))}
                       className="w-full px-3 py-2 border border-[#DBE5E0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E8C7D]"
                     >
-                      <option value="">Select a teacher</option>
+                      <option value="">Select a teacher (optional)</option>
                       {availableTeachers.map((teacher) => (
                         <option key={teacher.teacher_id} value={teacher.teacher_id}>
                           {teacher.teacher?.full_name || 'Unknown Teacher'}
                         </option>
                       ))}
                     </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-[#0F1717] mb-2">
+                      Start Date *
+                    </label>
+                    <input
+                      type="date"
+                      value={editedBatch.start_date}
+                      onChange={(e) => setEditedBatch(prev => ({ ...prev, start_date: e.target.value }))}
+                      className="w-full px-3 py-2 border border-[#DBE5E0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E8C7D]"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#0F1717] mb-2">
+                      End Date *
+                    </label>
+                    <input
+                      type="date"
+                      value={editedBatch.end_date}
+                      onChange={(e) => setEditedBatch(prev => ({ ...prev, end_date: e.target.value }))}
+                      className="w-full px-3 py-2 border border-[#DBE5E0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E8C7D]"
+                      min={editedBatch.start_date}
+                      required
+                    />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -636,7 +705,7 @@ export const BatchManagementModal: React.FC<BatchManagementModalProps> = ({
               </button>
               <button
                 onClick={handleSave}
-                disabled={loading || !editedBatch.name || !editedBatch.skill_id || !editedBatch.teacher_id}
+                disabled={loading || !editedBatch.name || !editedBatch.skill_id || !editedBatch.start_date || !editedBatch.end_date}
                 className="px-4 py-2 bg-[#5E8C7D] text-white rounded-lg hover:bg-[#4a6b5d] transition-colors disabled:opacity-50"
               >
                 {loading ? 'Saving...' : (isCreating ? 'Create Batch' : 'Save Changes')}

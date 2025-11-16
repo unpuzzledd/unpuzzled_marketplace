@@ -11,6 +11,13 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true
+    detectSessionInUrl: true,
+    storage: window.localStorage,
+    flowType: 'pkce' // More secure and reliable
+  },
+  global: {
+    headers: {
+      'x-client-info': 'unpuzzled-web'
+    }
   }
 })

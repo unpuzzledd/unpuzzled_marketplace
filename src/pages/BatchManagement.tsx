@@ -48,7 +48,6 @@ const BatchManagement = () => {
         <div className="flex justify-end items-start gap-8 flex-1">
           <div className="flex h-10 items-center gap-9">
             <span className="font-lexend text-sm font-normal leading-[21px] text-[#0F1717]">Home</span>
-            <span className="font-lexend text-sm font-normal leading-[21px] text-[#0F1717]">Community</span>
           </div>
           <div className="flex h-10 max-w-[480px] px-[10px] justify-center items-center gap-2 rounded-[20px] bg-[#F0F5F2]">
             <div className="flex flex-col items-center flex-1">

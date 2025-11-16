@@ -23,6 +23,7 @@ export class StudentApi {
         .select(`
           id,
           enrolled_at,
+          status,
           batch:batches (
             id,
             name,
@@ -53,10 +54,11 @@ export class StudentApi {
         return { data: null, error: error.message }
       }
 
-      // Flatten the structure for easier use
+      // Flatten the structure for easier use and include enrollment status
       const batches = (data || []).map(enrollment => ({
         enrollment_id: enrollment.id,
         enrolled_at: enrollment.enrolled_at,
+        enrollment_status: enrollment.status,
         ...enrollment.batch
       }))
 
@@ -573,19 +575,28 @@ export class StudentApi {
    */
   static async enrollInBatch(studentId: string, batchId: string): Promise<ApiResponse<any>> {
     try {
-      // Check if already enrolled
+      // Check if already enrolled (any status)
       const { data: existingEnrollment } = await supabase
         .from('batch_enrollments')
-        .select('id')
+        .select('id, status')
         .eq('student_id', studentId)
         .eq('batch_id', batchId)
         .single()
 
       if (existingEnrollment) {
+        if (existingEnrollment.status === 'pending') {
+          return { data: null, error: 'Enrollment request already pending' }
+        }
+        if (existingEnrollment.status === 'active') {
+          return { data: null, error: 'Already enrolled in this batch' }
+        }
+        if (existingEnrollment.status === 'rejected') {
+          return { data: null, error: 'Your enrollment request was rejected. Please contact the academy.' }
+        }
         return { data: null, error: 'Already enrolled in this batch' }
       }
 
-      // Check if batch is full
+      // Check if batch is full (only count active enrollments)
       const { data: batch } = await supabase
         .from('batches')
         .select('max_students')
@@ -596,19 +607,20 @@ export class StudentApi {
         .from('batch_enrollments')
         .select('id', { count: 'exact', head: true })
         .eq('batch_id', batchId)
+        .eq('status', 'active')
 
       if (batch && enrolledCount && enrolledCount >= batch.max_students) {
         return { data: null, error: 'Batch is full' }
       }
 
-      // Create enrollment
+      // Create enrollment with pending status
       const { data, error } = await supabase
         .from('batch_enrollments')
         .insert({
           student_id: studentId,
           batch_id: batchId,
           enrolled_at: new Date().toISOString(),
-          status: 'active'
+          status: 'pending'
         })
         .select()
         .single()
@@ -788,6 +800,236 @@ export class StudentApi {
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to get rank'
+      return { data: null, error: errorMessage }
+    }
+  }
+
+  // =============================================
+  // ACADEMY SEARCH & ENROLLMENT
+  // =============================================
+
+  /**
+   * Search academies by name, location, or skill
+   */
+  static async searchAcademies(
+    query?: string,
+    filters?: { locationIds?: string[]; skillIds?: string[] }
+  ): Promise<ApiResponse<any[]>> {
+    try {
+      let academiesQuery = supabase
+        .from('academies')
+        .select(`
+          id,
+          name,
+          phone_number,
+          location_ids,
+          skill_ids,
+          photo_urls,
+          status,
+          owner:users!academies_owner_id_fkey (
+            id,
+            full_name,
+            email
+          )
+        `)
+        .in('status', ['approved', 'active'])
+
+      // Apply name search
+      if (query && query.trim()) {
+        academiesQuery = academiesQuery.ilike('name', `%${query.trim()}%`)
+      }
+
+      const { data: academies, error } = await academiesQuery
+
+      if (error) {
+        console.error('Error fetching academies:', error)
+        return { data: null, error: error.message }
+      }
+
+      console.log('Academies fetched from DB:', academies?.length || 0)
+
+      // Filter by locations if provided (academy must have at least one of the selected locations)
+      let filteredAcademies = academies || []
+      if (filters?.locationIds && filters.locationIds.length > 0) {
+        filteredAcademies = filteredAcademies.filter(academy =>
+          academy.location_ids && 
+          Array.isArray(academy.location_ids) && 
+          filters.locationIds!.some(locationId => academy.location_ids.includes(locationId))
+        )
+      }
+
+      // Filter by skills if provided (academy must have at least one of the selected skills)
+      if (filters?.skillIds && filters.skillIds.length > 0) {
+        filteredAcademies = filteredAcademies.filter(academy =>
+          academy.skill_ids && 
+          Array.isArray(academy.skill_ids) && 
+          filters.skillIds!.some(skillId => academy.skill_ids.includes(skillId))
+        )
+      }
+
+      // Fetch location and skill details
+      const enrichedAcademies = await Promise.all(
+        filteredAcademies.map(async (academy) => {
+          // Get locations
+          const locations = academy.location_ids && academy.location_ids.length > 0
+            ? await supabase
+                .from('locations')
+                .select('id, name, city, state')
+                .in('id', academy.location_ids)
+            : { data: [] }
+
+          // Get skills
+          const skills = academy.skill_ids && academy.skill_ids.length > 0
+            ? await supabase
+                .from('skills')
+                .select('id, name, description')
+                .in('id', academy.skill_ids)
+            : { data: [] }
+
+          return {
+            ...academy,
+            locations: locations.data || [],
+            skills: skills.data || []
+          }
+        })
+      )
+
+      return { data: enrichedAcademies, error: null }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to search academies'
+      return { data: null, error: errorMessage }
+    }
+  }
+
+  /**
+   * Get academy details with available batches
+   */
+  static async getAcademyDetails(academyId: string): Promise<ApiResponse<any>> {
+    try {
+      // Get academy details
+      const { data: academy, error: academyError } = await supabase
+        .from('academies')
+        .select(`
+          *,
+          owner:users!academies_owner_id_fkey (
+            id,
+            full_name,
+            email
+          )
+        `)
+        .eq('id', academyId)
+        .single()
+
+      if (academyError || !academy) {
+        return { data: null, error: academyError?.message || 'Academy not found' }
+      }
+
+      // Get locations
+      const locations = academy.location_ids && academy.location_ids.length > 0
+        ? await supabase
+            .from('locations')
+            .select('id, name, city, state')
+            .in('id', academy.location_ids)
+        : { data: [] }
+
+      // Get skills
+      const skills = academy.skill_ids && academy.skill_ids.length > 0
+        ? await supabase
+            .from('skills')
+            .select('id, name, description')
+            .in('id', academy.skill_ids)
+        : { data: [] }
+
+      // Get available batches (active and future end_date)
+      const { data: batches, error: batchesError } = await supabase
+        .from('batches')
+        .select(`
+          *,
+          skill:skills (
+            id,
+            name,
+            description
+          ),
+          teacher:users!batches_teacher_id_fkey (
+            id,
+            full_name,
+            email
+          )
+        `)
+        .eq('academy_id', academyId)
+        .eq('status', 'active')
+        .gte('end_date', new Date().toISOString().split('T')[0])
+        .order('start_date', { ascending: true })
+
+      // Get enrollment counts for each batch
+      const batchesWithCounts = batches
+        ? await Promise.all(
+            batches.map(async (batch) => {
+              const { count } = await supabase
+                .from('batch_enrollments')
+                .select('id', { count: 'exact', head: true })
+                .eq('batch_id', batch.id)
+                .eq('status', 'active')
+
+              return {
+                ...batch,
+                enrolled_count: count || 0,
+                available_slots: batch.max_students - (count || 0)
+              }
+            })
+          )
+        : []
+
+      return {
+        data: {
+          ...academy,
+          locations: locations.data || [],
+          skills: skills.data || [],
+          batches: batchesWithCounts
+        },
+        error: null
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get academy details'
+      return { data: null, error: errorMessage }
+    }
+  }
+
+  /**
+   * Get student's pending enrollment requests
+   */
+  static async getMyEnrollmentRequests(studentId: string): Promise<ApiResponse<any[]>> {
+    try {
+      const { data, error } = await supabase
+        .from('batch_enrollments')
+        .select(`
+          *,
+          batch:batches (
+            id,
+            name,
+            start_date,
+            end_date,
+            skill:skills (
+              id,
+              name
+            ),
+            academy:academies (
+              id,
+              name
+            )
+          )
+        `)
+        .eq('student_id', studentId)
+        .eq('status', 'pending')
+        .order('enrolled_at', { ascending: false })
+
+      if (error) {
+        return { data: null, error: error.message }
+      }
+
+      return { data: data || [], error: null }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get enrollment requests'
       return { data: null, error: errorMessage }
     }
   }

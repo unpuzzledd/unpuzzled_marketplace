@@ -12,7 +12,7 @@ export class TeacherApi {
   // =============================================
 
   /**
-   * Get teacher's academy assignments
+   * Get teacher's academy assignments (only approved)
    */
   static async getMyAssignments(teacherId: string): Promise<ApiResponse<any[]>> {
     try {
@@ -43,10 +43,243 @@ export class TeacherApi {
   }
 
   /**
+   * Get all teacher's academy assignments (including pending/rejected)
+   */
+  static async getAllMyAssignments(teacherId: string): Promise<ApiResponse<any[]>> {
+    try {
+      const { data, error } = await supabase
+        .from('teacher_assignments')
+        .select(`
+          *,
+          academy:academies(
+            id,
+            name,
+            status
+          )
+        `)
+        .eq('teacher_id', teacherId)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        return { data: null, error: error.message }
+      }
+
+      return { data: data || [], error: null }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get all teacher assignments'
+      return { data: null, error: errorMessage }
+    }
+  }
+
+  /**
+   * Search academies by name, location, or skill (same as student search)
+   */
+  static async searchAcademies(
+    query?: string,
+    filters?: { locationIds?: string[]; skillIds?: string[] }
+  ): Promise<ApiResponse<any[]>> {
+    try {
+      let academiesQuery = supabase
+        .from('academies')
+        .select(`
+          id,
+          name,
+          phone_number,
+          location_ids,
+          skill_ids,
+          photo_urls,
+          status,
+          owner:users!academies_owner_id_fkey (
+            id,
+            full_name,
+            email
+          )
+        `)
+        .in('status', ['approved', 'active'])
+
+      if (query && query.trim()) {
+        academiesQuery = academiesQuery.ilike('name', `%${query.trim()}%`)
+      }
+
+      const { data: academies, error } = await academiesQuery
+
+      if (error) {
+        return { data: null, error: error.message }
+      }
+
+      // Filter by locations if provided
+      let filteredAcademies = academies || []
+      if (filters?.locationIds && filters.locationIds.length > 0) {
+        filteredAcademies = filteredAcademies.filter(academy =>
+          academy.location_ids && 
+          Array.isArray(academy.location_ids) && 
+          filters.locationIds!.some(locationId => academy.location_ids.includes(locationId))
+        )
+      }
+
+      // Filter by skills if provided
+      if (filters?.skillIds && filters.skillIds.length > 0) {
+        filteredAcademies = filteredAcademies.filter(academy =>
+          academy.skill_ids && 
+          Array.isArray(academy.skill_ids) && 
+          filters.skillIds!.some(skillId => academy.skill_ids.includes(skillId))
+        )
+      }
+
+      // Fetch location and skill details
+      const enrichedAcademies = await Promise.all(
+        filteredAcademies.map(async (academy) => {
+          const locations = academy.location_ids && academy.location_ids.length > 0
+            ? await supabase
+                .from('locations')
+                .select('id, name, city, state')
+                .in('id', academy.location_ids)
+            : { data: [] }
+
+          const skills = academy.skill_ids && academy.skill_ids.length > 0
+            ? await supabase
+                .from('skills')
+                .select('id, name, description')
+                .in('id', academy.skill_ids)
+            : { data: [] }
+
+          return {
+            ...academy,
+            locations: locations.data || [],
+            skills: skills.data || []
+          }
+        })
+      )
+
+      return { data: enrichedAcademies, error: null }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to search academies'
+      return { data: null, error: errorMessage }
+    }
+  }
+
+  /**
+   * Get academy details with available batches
+   */
+  static async getAcademyDetails(academyId: string): Promise<ApiResponse<any>> {
+    try {
+      const { data: academy, error: academyError } = await supabase
+        .from('academies')
+        .select(`
+          *,
+          owner:users!academies_owner_id_fkey (
+            id,
+            full_name,
+            email
+          )
+        `)
+        .eq('id', academyId)
+        .single()
+
+      if (academyError || !academy) {
+        return { data: null, error: academyError?.message || 'Academy not found' }
+      }
+
+      const locations = academy.location_ids && academy.location_ids.length > 0
+        ? await supabase
+            .from('locations')
+            .select('id, name, city, state')
+            .in('id', academy.location_ids)
+        : { data: [] }
+
+      const skills = academy.skill_ids && academy.skill_ids.length > 0
+        ? await supabase
+            .from('skills')
+            .select('id, name, description')
+            .in('id', academy.skill_ids)
+        : { data: [] }
+
+      return {
+        data: {
+          ...academy,
+          locations: locations.data || [],
+          skills: skills.data || []
+        },
+        error: null
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get academy details'
+      return { data: null, error: errorMessage }
+    }
+  }
+
+  /**
+   * Request to join an academy
+   */
+  static async requestToJoinAcademy(teacherId: string, academyId: string): Promise<ApiResponse<any>> {
+    try {
+      // Check if assignment already exists
+      const { data: existingAssignment } = await supabase
+        .from('teacher_assignments')
+        .select('id, status')
+        .eq('teacher_id', teacherId)
+        .eq('academy_id', academyId)
+        .single()
+
+      if (existingAssignment) {
+        if (existingAssignment.status === 'pending') {
+          return { data: null, error: 'Request already pending' }
+        }
+        if (existingAssignment.status === 'approved') {
+          return { data: null, error: 'Already approved for this academy' }
+        }
+        if (existingAssignment.status === 'rejected') {
+          return { data: null, error: 'Your request was rejected. Please contact the academy.' }
+        }
+      }
+
+      const { data, error } = await supabase
+        .from('teacher_assignments')
+        .insert({
+          teacher_id: teacherId,
+          academy_id: academyId,
+          status: 'pending',
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single()
+
+      if (error) {
+        return { data: null, error: error.message }
+      }
+
+      return { data, error: null }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to request to join academy'
+      return { data: null, error: errorMessage }
+    }
+  }
+
+  /**
    * Get all batches assigned to a teacher
+   * Only returns batches from academies where the teacher has an approved assignment
    */
   static async getMyBatches(teacherId: string): Promise<ApiResponse<any[]>> {
     try {
+      // First, get all approved academy assignments for this teacher
+      const { data: assignments, error: assignmentsError } = await supabase
+        .from('teacher_assignments')
+        .select('academy_id')
+        .eq('teacher_id', teacherId)
+        .eq('status', 'approved')
+
+      if (assignmentsError) {
+        return { data: null, error: assignmentsError.message }
+      }
+
+      // If no approved assignments, return empty array
+      if (!assignments || assignments.length === 0) {
+        return { data: [], error: null }
+      }
+
+      const academyIds = assignments.map(a => a.academy_id)
+
+      // Get batches where teacher is assigned AND academy is in approved assignments
       const { data, error } = await supabase
         .from('batches')
         .select(`
@@ -62,6 +295,7 @@ export class TeacherApi {
           )
         `)
         .eq('teacher_id', teacherId)
+        .in('academy_id', academyIds)
         .eq('status', 'active')
         .order('start_date', { ascending: true })
 
@@ -78,10 +312,12 @@ export class TeacherApi {
 
   /**
    * Get a specific batch with full details
+   * Only returns batch if teacher has approved assignment to the academy
    */
-  static async getBatchDetails(batchId: string): Promise<ApiResponse<any>> {
+  static async getBatchDetails(batchId: string, teacherId: string): Promise<ApiResponse<any>> {
     try {
-      const { data, error } = await supabase
+      // First get the batch to check academy_id
+      const { data: batch, error: batchError } = await supabase
         .from('batches')
         .select(`
           *,
@@ -96,13 +332,27 @@ export class TeacherApi {
           )
         `)
         .eq('id', batchId)
+        .eq('teacher_id', teacherId)
         .single()
 
-      if (error) {
-        return { data: null, error: error.message }
+      if (batchError || !batch) {
+        return { data: null, error: batchError?.message || 'Batch not found' }
       }
 
-      return { data, error: null }
+      // Verify teacher has approved assignment to this academy
+      const { data: assignment, error: assignmentError } = await supabase
+        .from('teacher_assignments')
+        .select('id')
+        .eq('teacher_id', teacherId)
+        .eq('academy_id', batch.academy_id)
+        .eq('status', 'approved')
+        .single()
+
+      if (assignmentError || !assignment) {
+        return { data: null, error: 'You do not have access to this batch' }
+      }
+
+      return { data: batch, error: null }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to get batch details'
       return { data: null, error: errorMessage }
@@ -115,18 +365,33 @@ export class TeacherApi {
 
   /**
    * Get students in a specific batch with their scores
+   * Only returns data if teacher has approved assignment to the academy
    */
-  static async getBatchStudentsWithScores(batchId: string): Promise<ApiResponse<any[]>> {
+  static async getBatchStudentsWithScores(batchId: string, teacherId: string): Promise<ApiResponse<any[]>> {
     try {
-      // First get the batch to know the skill_id and academy_id
+      // First get the batch to know the skill_id, academy_id, and verify teacher assignment
       const { data: batch, error: batchError } = await supabase
         .from('batches')
-        .select('skill_id, academy_id')
+        .select('skill_id, academy_id, teacher_id')
         .eq('id', batchId)
+        .eq('teacher_id', teacherId)
         .single()
 
-      if (batchError) {
-        return { data: null, error: batchError.message }
+      if (batchError || !batch) {
+        return { data: null, error: batchError?.message || 'Batch not found' }
+      }
+
+      // Verify teacher has approved assignment to this academy
+      const { data: assignment, error: assignmentError } = await supabase
+        .from('teacher_assignments')
+        .select('id')
+        .eq('teacher_id', teacherId)
+        .eq('academy_id', batch.academy_id)
+        .eq('status', 'approved')
+        .single()
+
+      if (assignmentError || !assignment) {
+        return { data: null, error: 'You do not have access to this batch' }
       }
 
       // Get students enrolled in this batch
@@ -187,14 +452,33 @@ export class TeacherApi {
 
   /**
    * Get all students across teacher's batches
+   * Only returns students from batches in academies where teacher has approved assignment
    */
   static async getMyStudents(teacherId: string): Promise<ApiResponse<any[]>> {
     try {
-      // Get all teacher's batches
+      // First, get all approved academy assignments for this teacher
+      const { data: assignments, error: assignmentsError } = await supabase
+        .from('teacher_assignments')
+        .select('academy_id')
+        .eq('teacher_id', teacherId)
+        .eq('status', 'approved')
+
+      if (assignmentsError) {
+        return { data: null, error: assignmentsError.message }
+      }
+
+      if (!assignments || assignments.length === 0) {
+        return { data: [], error: null }
+      }
+
+      const academyIds = assignments.map(a => a.academy_id)
+
+      // Get all teacher's batches from approved academies only
       const { data: batches, error: batchesError } = await supabase
         .from('batches')
         .select('id, name, skill_id, academy_id')
         .eq('teacher_id', teacherId)
+        .in('academy_id', academyIds)
         .eq('status', 'active')
 
       if (batchesError) {

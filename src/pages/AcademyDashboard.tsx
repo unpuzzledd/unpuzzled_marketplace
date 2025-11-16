@@ -28,6 +28,7 @@ const AcademyDashboard = () => {
   const [batches, setBatches] = useState<any[]>([])
   const [studentScores, setStudentScores] = useState<any[]>([])
   const [batchEnrollments, setBatchEnrollments] = useState<any[]>([])
+  const [pendingEnrollments, setPendingEnrollments] = useState<any[]>([])
   const [dataLoading, setDataLoading] = useState(true)
   const [dataError, setDataError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'overview' | 'teachers' | 'students' | 'batches' | 'analytics' | 'profile'>('overview')
@@ -102,73 +103,55 @@ const AcademyDashboard = () => {
 
       setAcademyData(academyResponse.data)
 
-      // Get academy statistics
-      const statsResponse = await AdminApi.getAcademyStatistics(academyResponse.data.id)
-      if (statsResponse.error || !statsResponse.data) {
-        setDataError(statsResponse.error || 'Failed to fetch statistics')
-        return
+      // Fetch all data in parallel for better performance
+      const [
+        statsResponse,
+        skillsResponse,
+        teachersResponse,
+        studentsResponse,
+        batchesResponse,
+        scoresResponse,
+        enrollmentsResponse,
+        pendingEnrollmentsResponse
+      ] = await Promise.all([
+        AdminApi.getAcademyStatistics(academyResponse.data.id),
+        AdminApi.getAcademySkills(academyResponse.data.id),
+        AdminApi.getAcademyTeachers(academyResponse.data.id),
+        AdminApi.getAcademyStudents(academyResponse.data.id),
+        AdminApi.getAcademyBatches(academyResponse.data.id),
+        AdminApi.getAcademyStudentScores(academyResponse.data.id),
+        AdminApi.getAcademyBatchEnrollments(academyResponse.data.id),
+        AdminApi.getPendingBatchEnrollments(academyResponse.data.id)
+      ])
+
+      // Set data if available (don't fail on individual errors)
+      if (statsResponse.data) setStatistics(statsResponse.data)
+      if (skillsResponse.data) setAcademySkills(skillsResponse.data)
+      if (teachersResponse.data) setTeachers(teachersResponse.data)
+      if (studentsResponse.data) setStudents(studentsResponse.data)
+      if (batchesResponse.data) setBatches(batchesResponse.data)
+      if (scoresResponse.data) setStudentScores(scoresResponse.data)
+      if (enrollmentsResponse.data) setBatchEnrollments(enrollmentsResponse.data)
+      if (pendingEnrollmentsResponse.data) setPendingEnrollments(pendingEnrollmentsResponse.data)
+
+      // Collect errors but don't block the UI
+      const errors = [
+        statsResponse.error,
+        skillsResponse.error,
+        teachersResponse.error,
+        studentsResponse.error,
+        batchesResponse.error,
+        scoresResponse.error,
+        enrollmentsResponse.error
+      ].filter(Boolean)
+
+      if (errors.length > 0) {
+        console.warn('Some data failed to load:', errors)
+        // Only set error if critical data is missing
+        if (!statsResponse.data && !teachersResponse.data && !studentsResponse.data) {
+          setDataError(errors[0] || 'Failed to load critical data')
+        }
       }
-
-      setStatistics(statsResponse.data)
-
-      // Get academy skills
-      const skillsResponse = await AdminApi.getAcademySkills(academyResponse.data.id)
-      if (skillsResponse.error || !skillsResponse.data) {
-        setDataError(skillsResponse.error || 'Failed to fetch skills')
-        return
-      }
-
-      setAcademySkills(skillsResponse.data)
-
-      // Get academy teachers
-      const teachersResponse = await AdminApi.getAcademyTeachers(academyResponse.data.id)
-      if (teachersResponse.error || !teachersResponse.data) {
-        setDataError(teachersResponse.error || 'Failed to fetch teachers')
-        return
-      }
-
-      setTeachers(teachersResponse.data)
-
-      // Get academy students
-      const studentsResponse = await AdminApi.getAcademyStudents(academyResponse.data.id)
-      if (studentsResponse.error || !studentsResponse.data) {
-        setDataError(studentsResponse.error || 'Failed to fetch students')
-        return
-      }
-
-      setStudents(studentsResponse.data)
-
-      // Get academy batches
-      const batchesResponse = await AdminApi.getAcademyBatches(academyResponse.data.id)
-      if (batchesResponse.error || !batchesResponse.data) {
-        setDataError(batchesResponse.error || 'Failed to fetch batches')
-        return
-      }
-
-      setBatches(batchesResponse.data)
-
-      // Get student scores
-      const scoresResponse = await AdminApi.getAcademyStudentScores(academyResponse.data.id)
-      if (scoresResponse.error || !scoresResponse.data) {
-        setDataError(scoresResponse.error || 'Failed to fetch student scores')
-        return
-      }
-
-      setStudentScores(scoresResponse.data)
-
-      // Get batch enrollments
-      const enrollmentsResponse = await AdminApi.getAcademyBatchEnrollments(academyResponse.data.id)
-      if (enrollmentsResponse.error || !enrollmentsResponse.data) {
-        setDataError(enrollmentsResponse.error || 'Failed to fetch batch enrollments')
-        return
-      }
-
-      setBatchEnrollments(enrollmentsResponse.data)
-
-      // Debug logging
-      console.log('Teachers data:', teachersResponse.data)
-      console.log('Students data:', studentsResponse.data)
-      console.log('Batches data:', batchesResponse.data)
     } catch (error) {
       console.error('Error fetching academy data:', error)
       setDataError(error instanceof Error ? error.message : 'Failed to fetch academy data')
@@ -644,6 +627,10 @@ const AcademyDashboard = () => {
               <span className="text-xs text-[#5E8C7D] leading-[14.4px] self-stretch">Active Teachers</span>
                   <span className="text-2xl font-bold text-[#0F1717] leading-[30px] self-stretch">{statistics?.activeTeachers || 0}</span>
             </div>
+            <div className="flex min-w-[158px] flex-1 flex-col items-center gap-4 bg-white border border-[#DBE5E0] rounded-xl p-6">
+              <span className="text-xs text-[#5E8C7D] leading-[14.4px] self-stretch">Pending Batch Enrollments</span>
+                  <span className="text-2xl font-bold text-[#0F1717] leading-[30px] self-stretch">{pendingEnrollments.length}</span>
+            </div>
           </div>
 
           {/* All Activity Section */}
@@ -711,58 +698,86 @@ const AcademyDashboard = () => {
                   </button>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+                <div className="space-y-4 p-4">
                   {teachers.map((teacher, index) => {
                     console.log('Rendering teacher:', JSON.stringify(teacher, null, 2))
+                    const assignedBatchesCount = teacher.batches?.length || 0;
                     return (
                       <div key={index} className="bg-white border border-[#DBE5E0] rounded-xl p-4">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="w-10 h-10 bg-[#F0F5F2] rounded-full flex items-center justify-center">
-                            <span className="text-sm font-bold text-[#0F1717]">
-                              {teacher.teacher?.full_name?.charAt(0) || 'T'}
-                            </span>
-                          </div>
-                          <div className="flex-1">
-                            <h3 className="font-bold text-[#0F1717]">{teacher.teacher?.full_name || 'Unknown Teacher'}</h3>
-                            <p className="text-sm text-[#5E8C7D]">{teacher.teacher?.email}</p>
-                            
-                            {/* Batch and Skill Information */}
-                            {teacher.batches && teacher.batches.length > 0 && (
-                              <div className="mt-2">
-                                <div className="flex flex-wrap gap-1">
-                                  {teacher.batches.slice(0, 2).map((batch: any, batchIndex: number) => (
-                                    <span key={batchIndex} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-[#F0F5F2] text-[#5E8C7D]">
-                                      {batch.skills?.name || 'Unknown Skill'} - {batch.name}
-                                    </span>
-                                  ))}
-                                  {teacher.batches.length > 2 && (
-                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-[#E8F0ED] text-[#5E8C7D]">
-                                      +{teacher.batches.length - 2} more
-                                    </span>
-                                  )}
-                                </div>
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-start gap-3 flex-1">
+                            <div className="w-12 h-12 bg-[#F0F5F2] rounded-full flex items-center justify-center flex-shrink-0">
+                              <span className="text-base font-bold text-[#0F1717]">
+                                {teacher.teacher?.full_name?.charAt(0) || 'T'}
+                              </span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="font-bold text-[#0F1717] text-lg">{teacher.teacher?.full_name || 'Unknown Teacher'}</h3>
+                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  teacher.status === 'approved' ? 'bg-green-100 text-green-800' : 
+                                  teacher.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                                  'bg-red-100 text-red-800'
+                                }`}>
+                                  {teacher.status}
+                                </span>
                               </div>
-                            )}
+                              <p className="text-sm text-[#5E8C7D] mb-3">{teacher.teacher?.email}</p>
+                              
+                              {/* Assigned Batches Section */}
+                              {assignedBatchesCount > 0 ? (
+                                <div className="mt-3">
+                                  <p className="text-xs font-semibold text-[#0F1717] mb-2">
+                                    Assigned Batches ({assignedBatchesCount}):
+                                  </p>
+                                  <div className="space-y-2">
+                                    {teacher.batches.map((batch: any, batchIndex: number) => (
+                                      <div key={batchIndex} className="bg-[#F7FCFA] border border-[#DBE5E0] rounded-lg p-2">
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-medium text-[#0F1717] truncate">
+                                              {batch.name}
+                                            </p>
+                                            <p className="text-xs text-[#5E8C7D]">
+                                              {batch.skills?.name || batch.skill?.name || 'Unknown Skill'}
+                                            </p>
+                                          </div>
+                                          <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
+                                            batch.status === 'active' 
+                                              ? 'bg-green-100 text-green-800' 
+                                              : 'bg-gray-100 text-gray-800'
+                                          }`}>
+                                            {batch.status}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ) : (
+                                <p className="text-xs text-[#5E8C7D] italic mt-2">
+                                  No batches assigned yet
+                                </p>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      <div className="flex justify-between items-center">
-                        <span className={`px-2 py-1 rounded-full text-xs ${
-                          teacher.status === 'approved' ? 'bg-green-100 text-green-800' : 
-                          teacher.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {teacher.status}
-                        </span>
-                        <button 
-                          onClick={() => handleManageTeacher(teacher)}
-                          className="text-sm text-[#009963] hover:underline"
-                        >
-                          Manage
-                        </button>
+                        <div className="flex justify-end pt-3 border-t border-[#DBE5E0]">
+                          <button 
+                            onClick={() => handleManageTeacher(teacher)}
+                            className="px-4 py-2 bg-[#009963] text-white text-sm font-medium rounded-lg hover:bg-[#007a4f] transition-colors"
+                          >
+                            Manage Teacher
+                          </button>
+                        </div>
                       </div>
-                    </div>
                     )
                   })}
+                  {teachers.length === 0 && (
+                    <div className="text-center py-8 text-[#5E8C7D]">
+                      <p>No teachers found. Add teachers to get started.</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -838,7 +853,95 @@ const AcademyDashboard = () => {
 
           {/* Batches Tab */}
           {activeTab === 'batches' && (
-            <div className="flex px-4 flex-col items-start self-stretch">
+            <div className="flex px-4 flex-col items-start self-stretch gap-4">
+              {/* Enrollment Requests Section */}
+              {pendingEnrollments.length > 0 && (
+                <div className="flex p-4 flex-col justify-center items-start gap-4 self-stretch bg-white border border-[#DBE5E0] rounded-xl">
+                  <div className="flex px-4 py-3 justify-between items-center self-stretch">
+                    <span className="text-[22px] font-bold text-[#0F1717] leading-7">
+                      Pending Enrollment Requests ({pendingEnrollments.length})
+                    </span>
+                  </div>
+                  <div className="w-full">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Student
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Batch
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Request Date
+                          </th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {pendingEnrollments.map((enrollment) => (
+                          <tr key={enrollment.id}>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-medium text-gray-900">
+                                {enrollment.student?.full_name || 'N/A'}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {enrollment.student?.email || 'N/A'}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">
+                                {enrollment.batch?.name || 'N/A'}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {enrollment.batch?.skill?.name || 'N/A'}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {new Date(enrollment.enrolled_at).toLocaleDateString()}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                              <div className="flex justify-end gap-2">
+                                <button
+                                  onClick={async () => {
+                                    const response = await AdminApi.approveBatchEnrollment(enrollment.id)
+                                    if (!response.error) {
+                                      fetchAcademyData()
+                                    } else {
+                                      alert('Failed to approve enrollment: ' + response.error)
+                                    }
+                                  }}
+                                  className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    if (confirm('Are you sure you want to reject this enrollment request?')) {
+                                      const response = await AdminApi.rejectBatchEnrollment(enrollment.id)
+                                      if (!response.error) {
+                                        fetchAcademyData()
+                                      } else {
+                                        alert('Failed to reject enrollment: ' + response.error)
+                                      }
+                                    }
+                                  }}
+                                  className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                                >
+                                  Reject
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
               <div className="flex p-4 flex-col justify-center items-start gap-4 self-stretch bg-white border border-[#DBE5E0] rounded-xl">
                 <div className="flex px-4 py-3 justify-between items-center self-stretch">
                   <span className="text-[22px] font-bold text-[#0F1717] leading-7">Batches ({batches.length})</span>

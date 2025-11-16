@@ -19,6 +19,7 @@ const TeacherLanding = () => {
   const [skills, setSkills] = useState<string[]>([])
   const [selectedBatch, setSelectedBatch] = useState<any>(null)
   const [loggingOut, setLoggingOut] = useState(false)
+  const [assignments, setAssignments] = useState<any[]>([])
 
   // Role-based access control
   useEffect(() => {
@@ -47,8 +48,12 @@ const TeacherLanding = () => {
       setDataLoading(true)
 
       try {
-        // Fetch batches
-        const batchesResponse = await TeacherApi.getMyBatches(user.id)
+        // Fetch batches and assignments in parallel
+        const [batchesResponse, assignmentsResponse] = await Promise.all([
+          TeacherApi.getMyBatches(user.id),
+          TeacherApi.getAllMyAssignments(user.id)
+        ])
+        
         if (batchesResponse.data) {
           setBatches(batchesResponse.data)
           
@@ -61,6 +66,10 @@ const TeacherLanding = () => {
             )
           ] as string[]
           setSkills(uniqueSkills)
+        }
+
+        if (assignmentsResponse.data) {
+          setAssignments(assignmentsResponse.data)
         }
 
         // Fetch statistics
@@ -100,6 +109,14 @@ const TeacherLanding = () => {
   const filteredBatches = selectedSkill === 'all' 
     ? batches 
     : batches.filter(b => b.skill?.name === selectedSkill)
+  
+  // Get approved, pending, and rejected assignments
+  const approvedAssignments = assignments.filter(a => a.status === 'approved')
+  const pendingAssignments = assignments.filter(a => a.status === 'pending')
+  const rejectedAssignments = assignments.filter(a => a.status === 'rejected')
+  
+  // Show "Browse Academies" if teacher has no approved assignments OR has pending/rejected assignments
+  const shouldShowBrowseAcademies = approvedAssignments.length === 0 || pendingAssignments.length > 0 || rejectedAssignments.length > 0
 
   // Loading state
   if (loading || dataLoading) {
@@ -140,7 +157,6 @@ const TeacherLanding = () => {
         <div className="flex justify-end items-start gap-8 flex-1">
           <div className="flex h-10 items-center gap-9">
             <span className="font-lexend text-sm font-normal leading-[21px] text-[#0F1717] cursor-pointer hover:text-[#009963]">Home</span>
-            <span className="font-lexend text-sm font-normal leading-[21px] text-[#0F1717] cursor-pointer hover:text-[#009963]">Community</span>
           </div>
           <div className="flex h-10 max-w-[480px] px-[10px] justify-center items-center gap-2 rounded-[20px] bg-[#F0F5F2] cursor-pointer hover:bg-[#E0E8E5]">
             <div className="flex flex-col items-center flex-1">
@@ -351,42 +367,74 @@ const TeacherLanding = () => {
                           </div>
                           
                           <div className="flex flex-col items-start gap-[14px] self-stretch">
-                            {filteredBatches.length === 0 ? (
+                            {/* Show Browse Academies if teacher has no assignments or has pending/rejected */}
+                            {shouldShowBrowseAcademies && (
+                              <div className="flex items-center justify-between px-3 py-2 bg-[#F0F5F2] rounded-lg border border-[#009963] self-stretch">
+                                <div className="flex flex-col gap-1 flex-1">
+                                  <div className="font-lexend text-base font-semibold leading-7 text-[#121212]">
+                                    Browse Academies
+                                  </div>
+                                  <div className="font-lexend text-sm leading-4 text-[#5E8C7D]">
+                                    {approvedAssignments.length === 0 
+                                      ? 'Start your teaching journey by exploring available academies'
+                                      : pendingAssignments.length > 0
+                                      ? `${pendingAssignments.length} request${pendingAssignments.length > 1 ? 's' : ''} pending approval`
+                                      : rejectedAssignments.length > 0
+                                      ? `${rejectedAssignments.length} request${rejectedAssignments.length > 1 ? 's' : ''} rejected. Browse more academies`
+                                      : 'Explore more academies and opportunities'}
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => navigate('/teacher/search')}
+                                  className="flex-shrink-0 px-4 py-2 bg-[#009963] text-white text-sm font-medium rounded-lg hover:bg-[#007a4f] transition-colors"
+                                  title="Browse Academies"
+                                >
+                                  Browse
+                                </button>
+                              </div>
+                            )}
+                            
+                            {filteredBatches.length === 0 && !shouldShowBrowseAcademies ? (
                               <div className="flex px-3 py-4 justify-center items-center self-stretch">
                                 <span className="font-lexend text-sm text-[#5E8C7D]">
                                   No batches assigned yet.
                                 </span>
                               </div>
-                            ) : (
-                              filteredBatches.map((batch, index) => (
-                                <div key={batch.id}>
-                                  <div className="flex px-3 justify-between items-center self-stretch">
-                                    <div className="flex flex-col items-start gap-1 flex-1">
-                                      <span className="font-lexend text-base font-normal leading-[28.228px] text-[#121212] opacity-70">
-                                        {batch.name}
-                                      </span>
-                                      <span className="font-lexend text-sm leading-[16.13px] text-[#41475E] opacity-50">
-                                        {batch.skill?.name || 'No skill'} • {formatDate(batch.start_date)}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                      <div 
-                                        className="flex items-center gap-1 cursor-pointer hover:opacity-70"
-                                        onClick={() => handleBatchClick(batch)}
-                                      >
-                                        <svg width="20" height="20" viewBox="0 0 20 21" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                          <path d="M9.50004 15.8095L9.50007 15.8094L15.6633 9.64623C14.8245 9.29711 13.831 8.72363 12.8914 7.78403C11.9516 6.84428 11.3781 5.85061 11.029 5.01171L4.86568 11.175L4.86567 11.1751C4.38471 11.656 4.14422 11.8965 3.9374 12.1617C3.69344 12.4744 3.48427 12.8129 3.31361 13.171C3.16893 13.4746 3.06139 13.7972 2.84629 14.4425L1.71203 17.8453C1.60618 18.1628 1.68883 18.5129 1.92552 18.7496C2.1622 18.9863 2.51231 19.0689 2.82986 18.9631L6.23264 17.8288C6.87792 17.6137 7.20057 17.5062 7.50414 17.3615C7.86223 17.1909 8.20067 16.9817 8.51346 16.7377C8.77861 16.5309 9.01911 16.2904 9.50004 15.8095Z" fill="#5E8C7D"/>
-                                          <path d="M17.3735 7.93601C18.6533 6.65626 18.6533 4.58137 17.3735 3.30161C16.0938 2.02186 14.0189 2.02186 12.7391 3.30161L11.9999 4.04081C12.01 4.07138 12.0205 4.10237 12.0314 4.13376C12.3024 4.91471 12.8136 5.93847 13.7753 6.90015C14.7369 7.86183 15.7607 8.37303 16.5416 8.64398C16.5729 8.65482 16.6037 8.66527 16.6342 8.67535L17.3735 7.93601Z" fill="#5E8C7D"/>
-                                        </svg>
+                            ) : filteredBatches.length > 0 ? (
+                              <>
+                                {shouldShowBrowseAcademies && (
+                                  <div className="w-full h-[1.344px] bg-[#ECECEC]"></div>
+                                )}
+                                {filteredBatches.map((batch, index) => (
+                                  <div key={batch.id}>
+                                    <div className="flex px-3 justify-between items-center self-stretch">
+                                      <div className="flex flex-col items-start gap-1 flex-1">
+                                        <span className="font-lexend text-base font-normal leading-[28.228px] text-[#121212] opacity-70">
+                                          {batch.name}
+                                        </span>
+                                        <span className="font-lexend text-sm leading-[16.13px] text-[#41475E] opacity-50">
+                                          {batch.skill?.name || 'No skill'} • {formatDate(batch.start_date)}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-4">
+                                        <div 
+                                          className="flex items-center gap-1 cursor-pointer hover:opacity-70"
+                                          onClick={() => handleBatchClick(batch)}
+                                        >
+                                          <svg width="20" height="20" viewBox="0 0 20 21" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M9.50004 15.8095L9.50007 15.8094L15.6633 9.64623C14.8245 9.29711 13.831 8.72363 12.8914 7.78403C11.9516 6.84428 11.3781 5.85061 11.029 5.01171L4.86568 11.175L4.86567 11.1751C4.38471 11.656 4.14422 11.8965 3.9374 12.1617C3.69344 12.4744 3.48427 12.8129 3.31361 13.171C3.16893 13.4746 3.06139 13.7972 2.84629 14.4425L1.71203 17.8453C1.60618 18.1628 1.68883 18.5129 1.92552 18.7496C2.1622 18.9863 2.51231 19.0689 2.82986 18.9631L6.23264 17.8288C6.87792 17.6137 7.20057 17.5062 7.50414 17.3615C7.86223 17.1909 8.20067 16.9817 8.51346 16.7377C8.77861 16.5309 9.01911 16.2904 9.50004 15.8095Z" fill="#5E8C7D"/>
+                                            <path d="M17.3735 7.93601C18.6533 6.65626 18.6533 4.58137 17.3735 3.30161C16.0938 2.02186 14.0189 2.02186 12.7391 3.30161L11.9999 4.04081C12.01 4.07138 12.0205 4.10237 12.0314 4.13376C12.3024 4.91471 12.8136 5.93847 13.7753 6.90015C14.7369 7.86183 15.7607 8.37303 16.5416 8.64398C16.5729 8.65482 16.6037 8.66527 16.6342 8.67535L17.3735 7.93601Z" fill="#5E8C7D"/>
+                                          </svg>
+                                        </div>
                                       </div>
                                     </div>
+                                    {index < filteredBatches.length - 1 && (
+                                      <div className="w-full h-[1.344px] bg-[#ECECEC] my-3"></div>
+                                    )}
                                   </div>
-                                  {index < filteredBatches.length - 1 && (
-                                    <div className="w-full h-[1.344px] bg-[#ECECEC] my-3"></div>
-                                  )}
-                                </div>
-                              ))
-                            )}
+                                ))}
+                              </>
+                            ) : null}
                           </div>
                         </div>
                       </div>

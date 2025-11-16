@@ -1678,10 +1678,85 @@ export class AdminApi {
   }
 
   /**
+   * Approve teacher assignment
+   */
+  static async approveTeacherAssignment(assignmentId: string): Promise<ApiResponse<any>> {
+    try {
+      const { data, error } = await supabase
+        .from('teacher_assignments')
+        .update({ status: 'approved' })
+        .eq('id', assignmentId)
+        .select()
+        .single();
+
+      if (error) {
+        return { data: null, error: error.message };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to approve teacher assignment';
+      return { data: null, error: errorMessage };
+    }
+  }
+
+  /**
+   * Reject teacher assignment
+   */
+  static async rejectTeacherAssignment(assignmentId: string): Promise<ApiResponse<any>> {
+    try {
+      const { data, error } = await supabase
+        .from('teacher_assignments')
+        .update({ status: 'rejected' })
+        .eq('id', assignmentId)
+        .select()
+        .single();
+
+      if (error) {
+        return { data: null, error: error.message };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to reject teacher assignment';
+      return { data: null, error: errorMessage };
+    }
+  }
+
+  /**
    * Remove teacher from academy
+   * Also unassigns the teacher from all batches in that academy
    */
   static async removeTeacherFromAcademy(assignmentId: string): Promise<ApiResponse<any>> {
     try {
+      // First, get the assignment to find the academy_id and teacher_id
+      const { data: assignment, error: assignmentError } = await supabase
+        .from('teacher_assignments')
+        .select('academy_id, teacher_id')
+        .eq('id', assignmentId)
+        .single();
+
+      if (assignmentError) {
+        return { data: null, error: assignmentError.message };
+      }
+
+      if (!assignment) {
+        return { data: null, error: 'Assignment not found' };
+      }
+
+      // Unassign teacher from all batches in this academy
+      const { error: batchesError } = await supabase
+        .from('batches')
+        .update({ teacher_id: null })
+        .eq('academy_id', assignment.academy_id)
+        .eq('teacher_id', assignment.teacher_id);
+
+      if (batchesError) {
+        console.error('Error unassigning teacher from batches:', batchesError);
+        // Continue with removal even if batch update fails
+      }
+
+      // Delete the teacher assignment
       const { error } = await supabase
         .from('teacher_assignments')
         .delete()
@@ -1751,6 +1826,111 @@ export class AdminApi {
     }
   }
 
+  // =============================================
+  // BATCH ENROLLMENT MANAGEMENT
+  // =============================================
+
+  /**
+   * Get pending batch enrollments for an academy
+   */
+  static async getPendingBatchEnrollments(academyId: string): Promise<ApiResponse<any[]>> {
+    try {
+      // First get all batches for this academy
+      const { data: batches, error: batchesError } = await supabase
+        .from('batches')
+        .select('id')
+        .eq('academy_id', academyId);
+
+      if (batchesError) {
+        return { data: null, error: batchesError.message };
+      }
+
+      if (!batches || batches.length === 0) {
+        return { data: [], error: null };
+      }
+
+      const batchIds = batches.map(b => b.id);
+
+      // Get pending enrollments for these batches
+      const { data: enrollments, error } = await supabase
+        .from('batch_enrollments')
+        .select(`
+          *,
+          student:users!batch_enrollments_student_id_fkey (
+            id,
+            full_name,
+            email
+          ),
+          batch:batches!batch_enrollments_batch_id_fkey (
+            id,
+            name,
+            skill:skills (
+              id,
+              name
+            )
+          )
+        `)
+        .in('batch_id', batchIds)
+        .eq('status', 'pending')
+        .order('enrolled_at', { ascending: false });
+
+      if (error) {
+        return { data: null, error: error.message };
+      }
+
+      return { data: enrollments || [], error: null };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get pending batch enrollments';
+      return { data: null, error: errorMessage };
+    }
+  }
+
+  /**
+   * Approve batch enrollment
+   */
+  static async approveBatchEnrollment(enrollmentId: string): Promise<ApiResponse<any>> {
+    try {
+      const { data, error } = await supabase
+        .from('batch_enrollments')
+        .update({ status: 'active' })
+        .eq('id', enrollmentId)
+        .select()
+        .single();
+
+      if (error) {
+        return { data: null, error: error.message };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to approve batch enrollment';
+      return { data: null, error: errorMessage };
+    }
+  }
+
+  /**
+   * Reject batch enrollment
+   */
+  static async rejectBatchEnrollment(enrollmentId: string): Promise<ApiResponse<any>> {
+    try {
+      const { data, error } = await supabase
+        .from('batch_enrollments')
+        .update({ status: 'rejected' })
+        .eq('id', enrollmentId)
+        .select()
+        .single();
+
+      if (error) {
+        return { data: null, error: error.message };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to reject batch enrollment';
+      return { data: null, error: errorMessage };
+    }
+  }
+
   /**
    * Add student score
    */
@@ -1796,23 +1976,33 @@ export class AdminApi {
   static async createBatch(batchData: {
     name: string;
     skill_id: string;
-    teacher_id: string;
+    teacher_id?: string;
     academy_id: string;
     max_students?: number;
     status?: string;
+    start_date: string;
+    end_date: string;
   }): Promise<ApiResponse<any>> {
     try {
+      const insertData: any = {
+        name: batchData.name,
+        skill_id: batchData.skill_id,
+        academy_id: batchData.academy_id,
+        max_students: batchData.max_students || 20,
+        status: batchData.status || 'active',
+        start_date: batchData.start_date,
+        end_date: batchData.end_date,
+        created_at: new Date().toISOString()
+      };
+      
+      // Only include teacher_id if it's provided
+      if (batchData.teacher_id) {
+        insertData.teacher_id = batchData.teacher_id;
+      }
+      
       const { data, error } = await supabase
         .from('batches')
-        .insert({
-          name: batchData.name,
-          skill_id: batchData.skill_id,
-          teacher_id: batchData.teacher_id,
-          academy_id: batchData.academy_id,
-          max_students: batchData.max_students || 20,
-          status: batchData.status || 'active',
-          created_at: new Date().toISOString()
-        })
+        .insert(insertData)
         .select()
         .single();
 
@@ -1836,11 +2026,22 @@ export class AdminApi {
     teacher_id?: string;
     max_students?: number;
     status?: string;
+    start_date?: string;
+    end_date?: string;
   }): Promise<ApiResponse<any>> {
     try {
+      // Prepare update data - convert empty string teacher_id to null
+      const updateData: any = { ...updates };
+      if (updateData.teacher_id === '') {
+        updateData.teacher_id = null;
+      } else if (updateData.teacher_id === undefined) {
+        // If teacher_id is undefined, don't include it in the update
+        delete updateData.teacher_id;
+      }
+      
       const { data, error } = await supabase
         .from('batches')
-        .update(updates)
+        .update(updateData)
         .eq('id', batchId)
         .select()
         .single();

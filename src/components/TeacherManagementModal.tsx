@@ -33,6 +33,9 @@ export const TeacherManagementModal: React.FC<TeacherManagementModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [teacherBatches, setTeacherBatches] = useState<any[]>([]);
   const [batchEnrollments, setBatchEnrollments] = useState<any[]>([]);
+  const [allBatches, setAllBatches] = useState<any[]>([]);
+  const [selectedBatchIds, setSelectedBatchIds] = useState<string[]>([]);
+  const [isAssigningBatches, setIsAssigningBatches] = useState(false);
 
   useEffect(() => {
     if (isOpen && teacher.teacher) {
@@ -41,6 +44,7 @@ export const TeacherManagementModal: React.FC<TeacherManagementModalProps> = ({
         email: teacher.teacher.email
       });
       loadTeacherBatches();
+      loadAllBatches();
     }
   }, [isOpen, teacher]);
 
@@ -74,6 +78,17 @@ export const TeacherManagementModal: React.FC<TeacherManagementModalProps> = ({
     }
   };
 
+  const loadAllBatches = async () => {
+    try {
+      const response = await AdminApi.getAcademyBatches(teacher.academy_id);
+      if (response.data) {
+        setAllBatches(response.data);
+      }
+    } catch (error) {
+      console.error('Error loading all batches:', error);
+    }
+  };
+
   const handleSave = async () => {
     if (!teacher.teacher) return;
     
@@ -97,6 +112,113 @@ export const TeacherManagementModal: React.FC<TeacherManagementModalProps> = ({
     } catch (error) {
       setError('Failed to update teacher information');
       console.error('Error updating teacher:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApproveTeacher = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { error } = await AdminApi.approveTeacherAssignment(teacher.id);
+      
+      if (error) {
+        setError(error);
+        return;
+      }
+
+      onTeacherUpdated();
+    } catch (error) {
+      setError('Failed to approve teacher');
+      console.error('Error approving teacher:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRejectTeacher = async () => {
+    if (!confirm('Are you sure you want to reject this teacher request?')) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { error } = await AdminApi.rejectTeacherAssignment(teacher.id);
+      
+      if (error) {
+        setError(error);
+        return;
+      }
+
+      onTeacherUpdated();
+    } catch (error) {
+      setError('Failed to reject teacher');
+      console.error('Error rejecting teacher:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAssignBatches = async () => {
+    if (selectedBatchIds.length === 0) {
+      setError('Please select at least one batch to assign');
+      return;
+    }
+
+    setIsAssigningBatches(true);
+    setError(null);
+
+    try {
+      const teacherId = teacher.teacher_id || teacher.teacher?.id;
+      
+      // Update each selected batch to assign the teacher
+      const updatePromises = selectedBatchIds.map(batchId => 
+        AdminApi.updateBatch(batchId, { teacher_id: teacherId })
+      );
+
+      await Promise.all(updatePromises);
+      
+      // Reload batches
+      await loadTeacherBatches();
+      await loadAllBatches();
+      setSelectedBatchIds([]);
+      setIsAssigningBatches(false);
+      onTeacherUpdated();
+    } catch (error) {
+      setError('Failed to assign batches');
+      console.error('Error assigning batches:', error);
+      setIsAssigningBatches(false);
+    }
+  };
+
+  const handleRemoveFromBatch = async (batchId: string, batchName: string) => {
+    if (!confirm(`Are you sure you want to remove this teacher from the batch "${batchName}"?`)) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Set teacher_id to null to unassign the teacher
+      const { error } = await AdminApi.updateBatch(batchId, { teacher_id: '' });
+      
+      if (error) {
+        setError(error);
+        return;
+      }
+
+      // Reload batches
+      await loadTeacherBatches();
+      await loadAllBatches();
+      onTeacherUpdated();
+    } catch (error) {
+      setError('Failed to remove teacher from batch');
+      console.error('Error removing teacher from batch:', error);
     } finally {
       setLoading(false);
     }
@@ -200,38 +322,161 @@ export const TeacherManagementModal: React.FC<TeacherManagementModalProps> = ({
           )}
         </div>
 
-        {/* Assigned Batches */}
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold text-[#0F1717] mb-4">Assigned Batches</h3>
-          {teacherBatches.length > 0 ? (
-            <div className="space-y-2">
-              {teacherBatches.map((batch, index) => {
-                const enrolledCount = batchEnrollments.filter(enrollment => enrollment.batch_id === batch.id).length;
-                return (
-                <div key={index} className="bg-[#F0F5F2] rounded-lg p-3">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h4 className="font-medium text-[#0F1717]">{batch.name}</h4>
-                      <p className="text-sm text-[#5E8C7D]">
-                        {batch.skill?.name || batch.skills?.name || 'No skill assigned'} • {enrolledCount}/{batch.max_students || 'N/A'} students
-                      </p>
-                    </div>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      batch.status === 'active' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {batch.status}
-                    </span>
-                  </div>
-                </div>
-                );
-              })}
+        {/* Approval Section - Show if pending */}
+        {teacher.status === 'pending' && (
+          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <h3 className="text-lg font-semibold text-[#0F1717] mb-2">Teacher Request Pending Approval</h3>
+            <p className="text-sm text-[#5E8C7D] mb-4">
+              This teacher has requested to join your academy. Please review and approve or reject their request.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleApproveTeacher}
+                disabled={loading}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+              >
+                {loading ? 'Approving...' : 'Approve'}
+              </button>
+              <button
+                onClick={handleRejectTeacher}
+                disabled={loading}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {loading ? 'Rejecting...' : 'Reject'}
+              </button>
             </div>
-          ) : (
-            <p className="text-gray-500 text-sm">No batches assigned to this teacher.</p>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Assign Batches Section - Show if approved */}
+        {teacher.status === 'approved' && (
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-[#0F1717] mb-4">Assign Batches</h3>
+            <div className="bg-[#F7FCFA] border border-[#DBE5E0] rounded-lg p-4">
+              <p className="text-sm text-[#5E8C7D] mb-4">
+                Select batches to assign to this teacher. Batches already assigned to this teacher are shown but cannot be selected again.
+              </p>
+              {allBatches.filter(batch => {
+                const teacherId = teacher.teacher_id || teacher.teacher?.id;
+                return !batch.teacher_id || batch.teacher_id === teacherId;
+              }).length > 0 ? (
+                <div className="space-y-2 max-h-60 overflow-y-auto mb-4">
+                  {allBatches
+                    .filter(batch => {
+                      const teacherId = teacher.teacher_id || teacher.teacher?.id;
+                      return !batch.teacher_id || batch.teacher_id === teacherId;
+                    })
+                    .map((batch) => {
+                      const isAssigned = batch.teacher_id === (teacher.teacher_id || teacher.teacher?.id);
+                      const isSelected = selectedBatchIds.includes(batch.id);
+                      const enrolledCount = batchEnrollments.filter(enrollment => enrollment.batch_id === batch.id).length;
+                      
+                      return (
+                        <label
+                          key={batch.id}
+                          className={`flex items-center p-3 rounded-lg border cursor-pointer ${
+                            isAssigned
+                              ? 'bg-green-50 border-green-200'
+                              : isSelected
+                              ? 'bg-blue-50 border-blue-200'
+                              : 'bg-white border-[#DBE5E0] hover:bg-[#F0F5F2]'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isAssigned || isSelected}
+                            disabled={isAssigned}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedBatchIds([...selectedBatchIds, batch.id]);
+                              } else {
+                                setSelectedBatchIds(selectedBatchIds.filter(id => id !== batch.id));
+                              }
+                            }}
+                            className="mr-3"
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-medium text-[#0F1717]">{batch.name}</h4>
+                              {isAssigned && (
+                                <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                                  Already Assigned
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-[#5E8C7D]">
+                              {batch.skill?.name || batch.skills?.name || 'No skill assigned'} • {enrolledCount}/{batch.max_students || 'N/A'} students
+                            </p>
+                          </div>
+                        </label>
+                      );
+                    })}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-sm mb-4">No unassigned batches available.</p>
+              )}
+              {selectedBatchIds.length > 0 && (
+                <button
+                  onClick={handleAssignBatches}
+                  disabled={isAssigningBatches}
+                  className="w-full px-4 py-2 bg-[#009963] text-white rounded-lg hover:bg-[#007a4f] transition-colors disabled:opacity-50"
+                >
+                  {isAssigningBatches ? 'Assigning...' : `Assign ${selectedBatchIds.length} Batch${selectedBatchIds.length > 1 ? 'es' : ''}`}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Assigned Batches */}
+        {teacher.status === 'approved' && (
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-[#0F1717] mb-4">Currently Assigned Batches ({teacherBatches.length})</h3>
+            {teacherBatches.length > 0 ? (
+              <div className="space-y-2">
+                {teacherBatches.map((batch, index) => {
+                  const enrolledCount = batchEnrollments.filter(enrollment => enrollment.batch_id === batch.id).length;
+                  return (
+                    <div key={index} className="bg-[#F0F5F2] rounded-lg p-3">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <h4 className="font-medium text-[#0F1717]">{batch.name}</h4>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              batch.status === 'active' 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {batch.status}
+                            </span>
+                          </div>
+                          <p className="text-sm text-[#5E8C7D] mb-2">
+                            {batch.skill?.name || batch.skills?.name || 'No skill assigned'} • {enrolledCount}/{batch.max_students || 'N/A'} students
+                          </p>
+                          {batch.start_date && batch.end_date && (
+                            <p className="text-xs text-[#5E8C7D]">
+                              {new Date(batch.start_date).toLocaleDateString()} - {new Date(batch.end_date).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => handleRemoveFromBatch(batch.id, batch.name)}
+                          disabled={loading}
+                          className="ml-3 px-3 py-1 text-xs bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50"
+                          title="Remove from batch"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-gray-500 text-sm">No batches assigned to this teacher yet.</p>
+            )}
+          </div>
+        )}
 
         {/* Error Message */}
         {error && (
@@ -261,18 +506,28 @@ export const TeacherManagementModal: React.FC<TeacherManagementModalProps> = ({
             </>
           ) : (
             <>
+              {teacher.status === 'approved' && (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="px-4 py-2 bg-[#5E8C7D] text-white rounded-lg hover:bg-[#4a6b5d] transition-colors"
+                >
+                  Edit Information
+                </button>
+              )}
+              {teacher.status === 'approved' && (
+                <button
+                  onClick={handleRemoveTeacher}
+                  disabled={loading}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                >
+                  {loading ? 'Removing...' : 'Remove Teacher'}
+                </button>
+              )}
               <button
-                onClick={() => setIsEditing(true)}
-                className="px-4 py-2 bg-[#5E8C7D] text-white rounded-lg hover:bg-[#4a6b5d] transition-colors"
+                onClick={onClose}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
               >
-                Edit Information
-              </button>
-              <button
-                onClick={handleRemoveTeacher}
-                disabled={loading}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-              >
-                {loading ? 'Removing...' : 'Remove Teacher'}
+                Close
               </button>
             </>
           )}

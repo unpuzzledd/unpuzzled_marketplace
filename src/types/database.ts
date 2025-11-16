@@ -114,7 +114,7 @@ export interface BatchEnrollment {
   student_id: string;
   batch_id: string;
   enrolled_at: string;
-  status: 'active' | 'completed' | 'dropped';
+  status: 'pending' | 'active' | 'completed' | 'dropped' | 'rejected';
   // Joined data
   student?: User;
   batch?: Batch;

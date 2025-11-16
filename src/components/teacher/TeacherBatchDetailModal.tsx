@@ -56,7 +56,7 @@ export const TeacherBatchDetailModal: React.FC<TeacherBatchDetailModalProps> = (
       console.log('Loading batch data for batch ID:', batch.id)
 
       // Load students with scores
-      const studentsResponse = await TeacherApi.getBatchStudentsWithScores(batch.id)
+      const studentsResponse = await TeacherApi.getBatchStudentsWithScores(batch.id, teacherId)
       console.log('Students response:', studentsResponse)
       
       if (studentsResponse.error) {

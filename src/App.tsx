@@ -7,6 +7,7 @@ import RoleSelection from './pages/RoleSelection'
 import Dashboard from './pages/Dashboard'
 import StudentDashboard from './pages/StudentDashboard'
 import StudentCourses from './pages/StudentCourses'
+import StudentAcademySearch from './pages/StudentAcademySearch'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminSignIn from './pages/AdminSignIn'
 import SmartRedirect from './pages/SmartRedirect'
@@ -28,8 +29,10 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/student" element={<StudentDashboard />} />
             <Route path="/student/courses" element={<StudentCourses />} />
+            <Route path="/student/search" element={<StudentAcademySearch />} />
             <Route path="/academy" element={<AcademyDashboard />} />
             <Route path="/teacher" element={<TeacherLanding />} />
+            <Route path="/teacher/search" element={<StudentAcademySearch />} />
             <Route path="/batches" element={<BatchManagement />} />
             <Route path="/admin/signin" element={<AdminSignIn />} />
             <Route path="/admin" element={<AdminDashboard />} />
