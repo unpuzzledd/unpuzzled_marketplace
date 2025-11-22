@@ -20,8 +20,22 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     console.log('AdminDashboard auth check:', { loading, isAuthenticated, adminUser })
-    if (!loading && !isAuthenticated) {
-      console.log('Not authenticated, redirecting to signin')
+    
+    // Give the auth callback time to complete (especially after OAuth redirect)
+    // Wait at least 3 seconds before redirecting to allow OAuth callback to process
+    const redirectTimer = setTimeout(() => {
+      if (!loading && !isAuthenticated) {
+        console.log('Not authenticated after timeout, redirecting to signin')
+        navigate('/admin/signin')
+      }
+    }, 3000) // 3 second delay
+    
+    // But if we're definitely not loading and not authenticated, redirect immediately
+    // (this handles the case where user manually navigates without being logged in)
+    if (!loading && !isAuthenticated && !window.location.search.includes('code=')) {
+      // Only redirect immediately if there's no OAuth callback code in URL
+      clearTimeout(redirectTimer)
+      console.log('Not authenticated (no OAuth callback), redirecting to signin')
       navigate('/admin/signin')
     }
     
@@ -29,6 +43,8 @@ const AdminDashboard = () => {
     if (currentPage === 'approvals') {
       setCurrentPage('dashboard')
     }
+    
+    return () => clearTimeout(redirectTimer)
   }, [isAuthenticated, loading, navigate, currentPage])
 
   // Load dashboard data when authenticated
