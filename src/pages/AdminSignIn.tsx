@@ -1,8 +1,50 @@
+import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAdminAuth } from '../hooks/useAdminAuth'
 import { Link } from 'react-router-dom'
 
 const AdminSignIn = () => {
-  const { adminSignInWithGoogle, loading } = useAdminAuth()
+  const { adminSignInWithGoogle, loading, isAuthenticated, adminUser } = useAdminAuth()
+  const navigate = useNavigate()
+
+  // Redirect to admin dashboard if already authenticated
+  useEffect(() => {
+    // Check localStorage directly for immediate check
+    const adminSession = localStorage.getItem('admin_session')
+    
+    // If we have admin session in localStorage, redirect
+    if (adminSession) {
+      // If React state is synced, redirect immediately
+      if (!loading && isAuthenticated && adminUser) {
+        console.log('AdminSignIn: Already authenticated, redirecting to admin dashboard')
+        navigate('/admin', { replace: true })
+        return
+      }
+      
+      // If state hasn't synced yet, wait a bit for it to catch up
+      if (loading || !isAuthenticated || !adminUser) {
+        console.log('AdminSignIn: Session found in localStorage, waiting for state sync...', {
+          loading,
+          isAuthenticated,
+          hasAdminUser: !!adminUser
+        })
+        const syncTimer = setTimeout(() => {
+          const stillHasSession = localStorage.getItem('admin_session')
+          if (stillHasSession) {
+            console.log('AdminSignIn: Redirecting to admin dashboard after sync')
+            navigate('/admin', { replace: true })
+          }
+        }, 500)
+        return () => clearTimeout(syncTimer)
+      }
+    }
+    
+    // Also check if authentication just completed (loading went from true to false)
+    if (!loading && isAuthenticated && adminUser) {
+      console.log('AdminSignIn: Authentication completed, redirecting to admin dashboard')
+      navigate('/admin', { replace: true })
+    }
+  }, [isAuthenticated, adminUser, loading, navigate])
 
   const handleGoogleSignIn = async () => {
     await adminSignInWithGoogle()

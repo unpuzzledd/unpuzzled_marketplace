@@ -19,23 +19,73 @@ const AdminDashboard = () => {
   const [dataError, setDataError] = useState<string | null>(null)
 
   useEffect(() => {
-    console.log('AdminDashboard auth check:', { loading, isAuthenticated, adminUser })
+    // Always check localStorage directly for most up-to-date state
+    const adminSessionFromStorage = localStorage.getItem('admin_session')
+    const hasAdminSession = !!adminSessionFromStorage
     
-    // Give the auth callback time to complete (especially after OAuth redirect)
-    // Wait at least 3 seconds before redirecting to allow OAuth callback to process
-    const redirectTimer = setTimeout(() => {
-      if (!loading && !isAuthenticated) {
-        console.log('Not authenticated after timeout, redirecting to signin')
-        navigate('/admin/signin')
+    console.log('AdminDashboard auth check:', { 
+      loading, 
+      isAuthenticated, 
+      adminUser,
+      hasAdminSession,
+      pathname: window.location.pathname,
+      hasCodeParam: window.location.search.includes('code=')
+    })
+    
+    // Never redirect while loading - wait for authentication to complete
+    if (loading) {
+      console.log('Still loading, waiting for authentication...')
+      return
+    }
+    
+    // Check if this is an OAuth callback (has code parameter)
+    const isOAuthCallback = window.location.search.includes('code=')
+    
+    // If we have admin session in localStorage, we're authenticated
+    // This is the source of truth since localStorage updates synchronously
+    if (hasAdminSession) {
+      // If React state hasn't caught up yet, wait a bit for it to sync
+      if (!isAuthenticated || !adminUser) {
+        console.log('Admin session in localStorage but state not updated, waiting for sync...')
+        const syncTimer = setTimeout(() => {
+          // Re-check after a brief delay
+          const stillHasSession = localStorage.getItem('admin_session')
+          if (!stillHasSession && !isAuthenticated) {
+            console.log('Session lost during sync, redirecting to signin')
+            navigate('/admin/signin')
+          }
+        }, 500)
+        return () => clearTimeout(syncTimer)
       }
-    }, 3000) // 3 second delay
+      
+      // Clean OAuth code from URL if present
+      if (isOAuthCallback) {
+        console.log('OAuth callback successful, cleaning URL...')
+        window.history.replaceState({}, '', window.location.pathname)
+      }
+      return // Authenticated, no redirect needed
+    }
     
-    // But if we're definitely not loading and not authenticated, redirect immediately
-    // (this handles the case where user manually navigates without being logged in)
-    if (!loading && !isAuthenticated && !window.location.search.includes('code=')) {
-      // Only redirect immediately if there's no OAuth callback code in URL
-      clearTimeout(redirectTimer)
-      console.log('Not authenticated (no OAuth callback), redirecting to signin')
+    // No admin session - check if we're processing OAuth callback
+    if (isOAuthCallback) {
+      console.log('OAuth callback detected but no session yet, waiting...')
+      const redirectTimer = setTimeout(() => {
+        // Final check - re-read localStorage (source of truth)
+        const finalCheckSession = localStorage.getItem('admin_session')
+        if (!finalCheckSession) {
+          console.log('Still not authenticated after OAuth callback delay, redirecting to signin')
+          navigate('/admin/signin')
+        } else {
+          console.log('Admin session found after delay, authentication successful')
+        }
+      }, 6000) // 6 seconds to give callback plenty of time
+      
+      return () => clearTimeout(redirectTimer)
+    }
+    
+    // Not loading, not authenticated, and not OAuth callback - redirect to signin
+    if (!isAuthenticated && !hasAdminSession) {
+      console.log('Not authenticated, redirecting to signin')
       navigate('/admin/signin')
     }
     
@@ -43,9 +93,7 @@ const AdminDashboard = () => {
     if (currentPage === 'approvals') {
       setCurrentPage('dashboard')
     }
-    
-    return () => clearTimeout(redirectTimer)
-  }, [isAuthenticated, loading, navigate, currentPage])
+  }, [isAuthenticated, loading, navigate, currentPage, adminUser])
 
   // Load dashboard data when authenticated
   useEffect(() => {

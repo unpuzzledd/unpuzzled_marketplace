@@ -36,7 +36,33 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
     // Prevent multiple simultaneous calls
     if (processingCallbackRef.current) {
       console.log('⚠️ [AdminAuth] handleGoogleCallback already processing, skipping...')
-      return
+      // Don't return - wait a bit and check if admin session was set by the other call
+      // This handles the case where multiple calls happen but one completes
+      return new Promise<void>((resolve) => {
+        const checkInterval = setInterval(() => {
+          const adminSession = localStorage.getItem('admin_session')
+          if (adminSession || !processingCallbackRef.current) {
+            clearInterval(checkInterval)
+            // If session was set, update state
+            if (adminSession) {
+              try {
+                const user = JSON.parse(adminSession)
+                setAdminUser(user)
+                setLoading(false)
+              } catch (error) {
+                console.error('Error parsing admin session:', error)
+              }
+            }
+            resolve()
+          }
+        }, 100)
+        
+        // Timeout after 5 seconds
+        setTimeout(() => {
+          clearInterval(checkInterval)
+          resolve()
+        }, 5000)
+      })
     }
 
     try {
@@ -48,25 +74,40 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
       console.log('🟢 [AdminAuth] About to call getSession()...')
       const sessionStartTime = Date.now()
       
-      // Add timeout to getSession() to prevent hanging
-      let sessionResult
+      // Get session with timeout to prevent hanging
+      let sessionResult: Awaited<ReturnType<typeof supabase.auth.getSession>> | null = null
       try {
-        const sessionPromise = supabase.auth.getSession()
+        console.log('🟢 [AdminAuth] Calling supabase.auth.getSession()...')
+        
+        // Use Promise.race with timeout to prevent hanging
+        const getSessionPromise = supabase.auth.getSession()
         const timeoutPromise = new Promise<never>((_, reject) => 
           setTimeout(() => reject(new Error('getSession timeout after 5 seconds')), 5000)
         )
         
-        sessionResult = await Promise.race([sessionPromise, timeoutPromise])
+        sessionResult = await Promise.race([getSessionPromise, timeoutPromise])
         const sessionEndTime = Date.now()
         console.log(`🟢 [AdminAuth] getSession() completed in ${sessionEndTime - sessionStartTime}ms`)
+        console.log('🟢 [AdminAuth] getSession result:', {
+          hasData: !!sessionResult?.data,
+          hasSession: !!sessionResult?.data?.session,
+          hasError: !!sessionResult?.error,
+          errorMessage: sessionResult?.error?.message
+        })
+        
+        if (!sessionResult) {
+          throw new Error('getSession returned undefined')
+        }
       } catch (error) {
-        console.error('❌ [AdminAuth] getSession failed or timed out:', error)
+        console.error('❌ [AdminAuth] getSession failed:', error)
+        console.error('❌ [AdminAuth] Error details:', error instanceof Error ? error.message : String(error))
+        console.error('❌ [AdminAuth] Error stack:', error instanceof Error ? error.stack : 'No stack')
         setLoading(false)
         processingCallbackRef.current = false
         return
       }
       
-      const { data: { session }, error: sessionError } = sessionResult
+      const { data: { session }, error: sessionError } = sessionResult || {}
       
       if (sessionError) {
         console.error('❌ [AdminAuth] Error getting session:', sessionError)
@@ -139,12 +180,20 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
 
           console.log('✅ [AdminAuth] Setting admin user:', adminUser)
           console.log('✅ [AdminAuth] About to store in localStorage...')
-          // Store admin session
+          // Store admin session FIRST (synchronous, immediate)
           localStorage.setItem('admin_session', JSON.stringify(adminUser))
           console.log('✅ [AdminAuth] Stored in localStorage, setting state...')
+          
+          // Set state - this will trigger re-render
           setAdminUser(adminUser)
-          setLoading(false)
-          console.log('✅ [AdminAuth] Admin authentication complete!')
+          
+          // Set loading to false AFTER state is set
+          // Use requestAnimationFrame to ensure state update is processed
+          requestAnimationFrame(() => {
+            setLoading(false)
+            processingCallbackRef.current = false
+            console.log('✅ [AdminAuth] Admin authentication complete!')
+          })
         } else {
           // Not an admin email, sign out
           console.log('❌ [AdminAuth] Not an admin email, signing out...')
@@ -158,15 +207,16 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
           await supabase.auth.signOut()
           alert(`Access denied. Email "${email}" is not authorized for admin access.`)
           setLoading(false)
+          processingCallbackRef.current = false
         }
     } catch (error) {
       console.error('❌ [AdminAuth] Error handling Google callback:', error)
       console.error('❌ [AdminAuth] Error stack:', error instanceof Error ? error.stack : 'No stack trace')
       setLoading(false)
-    } finally {
-      console.log('🟢 [AdminAuth] handleGoogleCallback finally block - resetting processing flag')
       processingCallbackRef.current = false
     }
+    // Note: processingCallbackRef is reset in each code path above
+    // No finally block needed - we want explicit control over when the flag is reset
   }
 
   useEffect(() => {
@@ -244,19 +294,51 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
         
         const { session } = sessionResult.data || {}
         
-        if (session?.user && (window.location.pathname === '/admin' || window.location.pathname === '/admin/signin')) {
+        if (session?.user && (window.location.pathname === '/admin' || window.location.pathname === '/admin/signin' || window.location.search.includes('code='))) {
           console.log('🟢 [AdminAuth] Found Supabase session on admin page, processing admin callback')
-          await handleGoogleCallback()
+          // Ensure loading is true before processing callback
+          if (mounted) {
+            setLoading(true)
+          }
+          try {
+            await handleGoogleCallback()
+            // After callback completes, verify admin session was set
+            const adminSessionAfterCallback = localStorage.getItem('admin_session')
+            if (!adminSessionAfterCallback && mounted) {
+              console.warn('⚠️ [AdminAuth] Callback completed but no admin session found')
+              // Don't set loading to false - let the auth state change handler or timeout handle it
+            }
+          } catch (error) {
+            console.error('❌ [AdminAuth] Error in handleGoogleCallback from checkAdminSession:', error)
+            if (mounted) {
+              setLoading(false)
+            }
+          }
           if (timeoutId) clearTimeout(timeoutId)
         } else {
           console.log('🟢 [AdminAuth] No Supabase session or not on admin page', {
             hasSession: !!session,
             hasUser: !!session?.user,
             pathname: window.location.pathname,
-            isAdminPage: window.location.pathname === '/admin' || window.location.pathname === '/admin/signin'
+            isAdminPage: window.location.pathname === '/admin' || window.location.pathname === '/admin/signin',
+            hasCodeParam: window.location.search.includes('code=')
           })
-          if (mounted) {
+          // Check if OAuth callback is in progress
+          const isOAuthCallback = window.location.search.includes('code=')
+          const isProcessingCallback = processingCallbackRef.current
+          
+          // Only set loading to false if we're definitely not processing anything
+          if (mounted && !isOAuthCallback && !isProcessingCallback) {
             setLoading(false)
+          } else {
+            // OAuth callback or processing in progress, keep loading true
+            console.log('🟢 [AdminAuth] OAuth callback or processing detected, keeping loading true', {
+              isOAuthCallback,
+              isProcessingCallback
+            })
+            if (mounted) {
+              setLoading(true)
+            }
           }
           if (timeoutId) clearTimeout(timeoutId)
         }
@@ -301,12 +383,17 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
       })
       
       if (error) throw error
+      // Don't set loading to false here - the redirect will happen
+      // and loading will be managed by the callback handler
+      // This prevents the AdminDashboard from redirecting prematurely
     } catch (error) {
       console.error('Admin Google sign in error:', error)
       alert('Error signing in with Google. Please try again.')
-    } finally {
       setLoading(false)
     }
+    // Note: We don't set loading to false in finally because
+    // the OAuth flow will redirect, and loading state will be
+    // managed by the callback handlers
   }
 
   // Listen for auth state changes only for admin-specific flows
@@ -323,18 +410,57 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
           hasCodeParam: window.location.search.includes('code=')
         })
         
-        if (event === 'SIGNED_IN' && session?.user) {
+        if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
           // Handle admin callback for both admin signin page and admin dashboard
           // Also check if we're on admin routes or if there's an OAuth code in URL
           const isAdminRoute = window.location.pathname === '/admin/signin' || 
                              window.location.pathname === '/admin' ||
                              window.location.search.includes('code=')
           
-          if (isAdminRoute) {
-            console.log('🟢 [AdminAuth] Calling handleGoogleCallback from auth state change')
-            // Set loading to true while processing
+          // For INITIAL_SESSION, only process if we don't already have an admin session
+          // This prevents duplicate processing
+          const hasAdminSession = localStorage.getItem('admin_session')
+          
+          // Skip if callback is already processing to prevent race conditions
+          if (processingCallbackRef.current) {
+            console.log('⚠️ [AdminAuth] Callback already processing, skipping auth state change handler')
+            // But ensure loading stays true while callback is processing
+            if (!hasAdminSession) {
+              setLoading(true)
+            }
+            return
+          }
+          
+          if (isAdminRoute && (!hasAdminSession || event === 'SIGNED_IN')) {
+            console.log('🟢 [AdminAuth] Calling handleGoogleCallback from auth state change', { event })
+            // Set loading to true while processing - this prevents premature redirects
             setLoading(true)
-            await handleGoogleCallback()
+            try {
+              await handleGoogleCallback()
+              // Loading will be set to false inside handleGoogleCallback when done
+              // But verify admin session was set
+              const sessionSet = localStorage.getItem('admin_session')
+              if (!sessionSet) {
+                console.warn('⚠️ [AdminAuth] Callback completed but no admin session found')
+                // Don't set loading to false here - let the timeout or next check handle it
+              }
+            } catch (error) {
+              console.error('❌ [AdminAuth] Error in handleGoogleCallback from auth state change:', error)
+              setLoading(false)
+            }
+          } else if (isAdminRoute && hasAdminSession && event === 'INITIAL_SESSION') {
+            // We have a session but it's INITIAL_SESSION - verify it's still valid
+            console.log('🟢 [AdminAuth] Admin session exists, verifying...')
+            try {
+              const storedSession = JSON.parse(hasAdminSession)
+              setAdminUser(storedSession)
+              setLoading(false)
+            } catch (error) {
+              console.error('❌ [AdminAuth] Error parsing stored admin session:', error)
+              localStorage.removeItem('admin_session')
+              setLoading(true)
+              await handleGoogleCallback()
+            }
           }
         } else if (event === 'SIGNED_OUT') {
           console.log('🟡 [AdminAuth] User signed out, clearing admin session')
@@ -345,8 +471,10 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
           // If token is refreshed and we're on admin page, check if user is admin
           const isAdminRoute = window.location.pathname === '/admin/signin' || 
                              window.location.pathname === '/admin'
-          if (isAdminRoute && !adminUser) {
+          const hasAdminSession = localStorage.getItem('admin_session')
+          if (isAdminRoute && !hasAdminSession && !processingCallbackRef.current) {
             console.log('🟢 [AdminAuth] Token refreshed, checking admin status')
+            setLoading(true)
             await handleGoogleCallback()
           }
         }
@@ -354,7 +482,7 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
     )
 
     return () => subscription.unsubscribe()
-  }, [adminUser])
+  }, []) // Remove adminUser dependency to prevent re-subscription on every state change
 
   const adminSignOut = async () => {
     try {
