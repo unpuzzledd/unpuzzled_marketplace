@@ -3,6 +3,9 @@ import { User as SupabaseUser } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { User, AuthContextType } from '../types/auth'
 
+// Debug: Log Supabase configuration
+console.log('🔧 Supabase URL:', import.meta.env.VITE_SUPABASE_URL?.substring(0, 30) + '...')
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const useAuth = () => {
@@ -137,11 +140,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchUserProfile = async (authUser: SupabaseUser) => {
     console.log('🔵 fetchUserProfile called for:', authUser.id, authUser.email)
     try {
-      const { data, error } = await supabase
+      // Add timeout to prevent indefinite hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Query timeout after 5s')), 5000)
+      )
+      
+      const queryPromise = supabase
         .from('users')
         .select('*')
         .eq('id', authUser.id)
         .maybeSingle()
+
+      console.log('🔵 fetchUserProfile query starting...')
+      const result = await Promise.race([queryPromise, timeoutPromise]) as { data: User | null; error: Error | null }
+      const { data, error } = result
 
       console.log('🔵 fetchUserProfile query result:', { data, error })
 
