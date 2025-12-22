@@ -127,15 +127,7 @@ const AcademyDashboard = () => {
       // Set data if available (don't fail on individual errors)
       if (statsResponse.data) setStatistics(statsResponse.data)
       if (skillsResponse.data) {
-        console.log('🟢 [AcademyDashboard] Fetched academy skills:', {
-          academyId: academyResponse.data.id,
-          skillsCount: skillsResponse.data.length,
-          skills: skillsResponse.data.map(s => ({ id: s.id, name: s.name })),
-          skillIds: academyResponse.data.skill_ids
-        })
         setAcademySkills(skillsResponse.data)
-      } else if (skillsResponse.error) {
-        console.error('❌ [AcademyDashboard] Error fetching skills:', skillsResponse.error)
       }
       if (teachersResponse.data) setTeachers(teachersResponse.data)
       if (studentsResponse.data) setStudents(studentsResponse.data)
@@ -156,14 +148,12 @@ const AcademyDashboard = () => {
       ].filter(Boolean)
 
       if (errors.length > 0) {
-        console.warn('Some data failed to load:', errors)
         // Only set error if critical data is missing
         if (!statsResponse.data && !teachersResponse.data && !studentsResponse.data) {
           setDataError(errors[0] || 'Failed to load critical data')
         }
       }
     } catch (error) {
-      console.error('Error fetching academy data:', error)
       setDataError(error instanceof Error ? error.message : 'Failed to fetch academy data')
     } finally {
       setDataLoading(false)
@@ -268,7 +258,10 @@ const AcademyDashboard = () => {
           <h2 className="text-xl font-bold text-[#0F1717] mb-2">Error Loading Data</h2>
           <p className="text-[#5E8C7D] mb-4">{dataError}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => {
+              setDataError(null);
+              fetchAcademyData();
+            }}
             className="px-4 py-2 bg-[#009963] text-white rounded-lg hover:bg-[#007a4d] transition-colors"
           >
             Retry
@@ -363,12 +356,6 @@ const AcademyDashboard = () => {
     name: skill.name,
     image: 'https://api.builder.io/api/v1/image/assets/TEMP/4c88c0a5855eb4415bad44ff5c61d4454f8e5509?width=496' // Default image for now
   }))
-  
-  console.log('🔵 [AcademyDashboard] Activities to display:', {
-    activitiesCount: activities.length,
-    activities: activities.map(a => ({ id: a.id, name: a.name })),
-    academySkillsCount: academySkills.length
-  })
 
   const upcomingActivities = academySkills.map(skill => skill.name)
 
@@ -725,7 +712,6 @@ const AcademyDashboard = () => {
                 
                 <div className="space-y-4 p-4">
                   {teachers.map((teacher, index) => {
-                    console.log('Rendering teacher:', JSON.stringify(teacher, null, 2))
                     const assignedBatchesCount = teacher.batches?.length || 0;
                     return (
                       <div key={index} className="bg-white border border-[#DBE5E0] rounded-xl p-4">
@@ -821,7 +807,6 @@ const AcademyDashboard = () => {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
                   {students.map((student, index) => {
-                    console.log('Rendering student:', JSON.stringify(student, null, 2))
                     return (
                       <div key={index} className="bg-white border border-[#DBE5E0] rounded-xl p-4">
                         <div className="flex items-center gap-3 mb-3">

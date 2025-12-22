@@ -71,20 +71,9 @@ const StudentAcademySearch = () => {
           AdminApi.getSkills()     // Gets all active skills from admin-managed skills table
         ])
         
-        console.log('Loaded locations:', locationsData)
-        console.log('Loaded skills:', skillsData)
-        
         setLocations(locationsData || [])
         setSkills(skillsData || [])
-        
-        if (!locationsData || locationsData.length === 0) {
-          console.warn('No locations found. Check RLS policies.')
-        }
-        if (!skillsData || skillsData.length === 0) {
-          console.warn('No skills found. Check RLS policies.')
-        }
       } catch (error) {
-        console.error('Error loading filters:', error)
         // Set empty arrays on error to prevent UI issues
         setLocations([])
         setSkills([])
@@ -100,12 +89,6 @@ const StudentAcademySearch = () => {
 
       setDataLoading(true)
       try {
-        console.log('Searching academies with:', {
-          query: searchQuery,
-          locationIds: selectedLocations,
-          skillIds: selectedSkills
-        })
-        
         let response
         if (user.role === 'teacher') {
           // Use TeacherApi for teachers
@@ -122,19 +105,14 @@ const StudentAcademySearch = () => {
           })
         }
 
-        console.log('Search response:', response)
-
         if (response.data) {
-          console.log('Academies found:', response.data.length)
           setAcademies(response.data)
           // Fetch statuses for each academy
           fetchAcademyStatuses(response.data)
         } else if (response.error) {
-          console.error('Error searching academies:', response.error)
           setAcademies([])
         }
       } catch (error) {
-        console.error('Error searching academies:', error)
         setAcademies([])
       } finally {
         setDataLoading(false)
@@ -166,7 +144,7 @@ const StudentAcademySearch = () => {
         setSelectedAcademy(response.data)
       }
     } catch (error) {
-      console.error('Error loading academy details:', error)
+      // Silent catch
     } finally {
       setDataLoading(false)
     }
@@ -218,7 +196,7 @@ const StudentAcademySearch = () => {
         }
       }
     } catch (error) {
-      console.error('Error fetching academy statuses:', error)
+      // Silent catch
     }
 
     setAcademyStatuses(statuses)

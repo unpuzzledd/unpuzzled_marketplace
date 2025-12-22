@@ -78,7 +78,7 @@ const TeacherLanding = () => {
           setStatistics(statsResponse.data)
         }
       } catch (error) {
-        console.error('Error fetching teacher data:', error)
+        // Silent catch
       } finally {
         setDataLoading(false)
       }

@@ -22,7 +22,6 @@ export const ViewTopic: React.FC<ViewTopicProps> = ({ isOpen = true, onClose }) 
   };
 
   const handleComplete = () => {
-    console.log('Topic completed');
     handleClose();
   };
 

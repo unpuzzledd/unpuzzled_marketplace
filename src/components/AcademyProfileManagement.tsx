@@ -34,6 +34,22 @@ export const AcademyProfileManagement: React.FC<AcademyProfileManagementProps> =
     loadData();
   }, []);
 
+  // Sync formData when academy prop changes (e.g., after update)
+  useEffect(() => {
+    setFormData({
+      name: academy.name || '',
+      phone_number: academy.phone_number || '',
+      location_ids: academy.location_ids || [],
+      skill_ids: academy.skill_ids || []
+    });
+    setExistingPhotos(academy.photo_urls || []);
+    console.log('🟢 [AcademyProfile] Form data synced with academy prop:', {
+      academyId: academy.id,
+      skillIds: academy.skill_ids || [],
+      skillIdsLength: (academy.skill_ids || []).length
+    });
+  }, [academy.id, academy.skill_ids, academy.location_ids, academy.name, academy.phone_number, academy.photo_urls]);
+
   const loadData = async () => {
     setLoading(true);
     setError(null);
@@ -71,6 +87,12 @@ export const AcademyProfileManagement: React.FC<AcademyProfileManagementProps> =
       const skillIds = prev.skill_ids.includes(skillId)
         ? prev.skill_ids.filter(id => id !== skillId)
         : [...prev.skill_ids, skillId];
+      console.log('🔵 [AcademyProfile] Skill toggled:', {
+        skillId,
+        action: prev.skill_ids.includes(skillId) ? 'removed' : 'added',
+        newSkillIds: skillIds,
+        skillIdsLength: skillIds.length
+      });
       return { ...prev, skill_ids: skillIds };
     });
   };
@@ -144,6 +166,18 @@ export const AcademyProfileManagement: React.FC<AcademyProfileManagementProps> =
 
     setSubmitting(true);
 
+    console.log('🔵 [AcademyProfile] Submitting form with data:', {
+      academyId: academy.id,
+      name: formData.name,
+      phone_number: formData.phone_number,
+      location_ids: formData.location_ids,
+      skill_ids: formData.skill_ids,
+      skillIdsLength: formData.skill_ids.length,
+      skillIdsType: Array.isArray(formData.skill_ids) ? 'array' : typeof formData.skill_ids,
+      hasNewPhotos: newPhotos.length > 0,
+      hasPhotosToDelete: photosToDelete.length > 0
+    });
+
     try {
       const result = await AcademyApi.updateAcademyProfile(academy.id, {
         name: formData.name,
@@ -155,11 +189,37 @@ export const AcademyProfileManagement: React.FC<AcademyProfileManagementProps> =
       });
 
       if (result.data) {
-        console.log('Academy profile updated successfully:', result.data);
+        console.log('✅ [AcademyProfile] Academy profile updated successfully:', {
+          academyId: result.data.id,
+          skillIds: result.data.skill_ids,
+          skillIdsLength: result.data.skill_ids?.length,
+          submittedSkillIds: formData.skill_ids,
+          submittedSkillIdsLength: formData.skill_ids.length,
+          match: JSON.stringify(result.data.skill_ids?.sort()) === JSON.stringify(formData.skill_ids.sort())
+        });
+        
+        // Verify skill_ids were actually updated
+        if (result.data.skill_ids && formData.skill_ids.length > 0) {
+          const updatedIds = result.data.skill_ids.sort();
+          const submittedIds = formData.skill_ids.sort();
+          if (JSON.stringify(updatedIds) !== JSON.stringify(submittedIds)) {
+            console.warn('⚠️ [AcademyProfile] Skill IDs mismatch after update:', {
+              submitted: submittedIds,
+              returned: updatedIds
+            });
+          }
+        }
+        
         onSuccess?.();
       } else {
-        console.error('Failed to update academy profile:', result.error);
-        setError(result.error || 'Failed to update academy profile');
+        console.error('❌ [AcademyProfile] Failed to update academy profile:', result.error);
+        const errorMessage = result.error || 'Failed to update academy profile';
+        console.error('❌ [AcademyProfile] Error details:', {
+          error: result.error,
+          submittedSkillIds: formData.skill_ids,
+          academyId: academy.id
+        });
+        setError(errorMessage);
       }
     } catch (err) {
       console.error('Error updating academy profile:', err);

@@ -11,11 +11,7 @@ const RoleSelection = () => {
 
   // Check if user already has a role (user already exists)
   useEffect(() => {
-    if (!loading && user && user.role) {
-      // User already has a role, they should sign in instead
-      // This will be handled in the render
-      console.log('User already has role:', user.role)
-    }
+    // User already has a role - this is handled in render
   }, [user, loading])
 
   const handleSignIn = async () => {
@@ -23,7 +19,7 @@ const RoleSelection = () => {
       setIsSigningIn(true)
       await smartLoginWithGoogle()
     } catch (error) {
-      console.error('Error signing in:', error)
+      // Silent catch
     } finally {
       setIsSigningIn(false)
     }
@@ -64,7 +60,6 @@ const RoleSelection = () => {
         navigate('/dashboard')
       }
     } catch (error) {
-      console.error('Error updating role:', error)
       alert('Failed to update role. Please try again or sign in if you already have an account.')
     } finally {
       setIsSubmitting(false)

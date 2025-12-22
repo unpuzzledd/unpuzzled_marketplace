@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AdminApi } from '../lib/adminApi';
 import { Academy, Location, Skill } from '../types/database';
 
@@ -34,6 +34,9 @@ export const AdminAcademyProfileView: React.FC<AdminAcademyProfileViewProps> = (
   const [dataLoading, setDataLoading] = useState(false);
   const [dataError, setDataError] = useState<string | null>(null);
   
+  // Tab caching - tracks which tabs have been loaded to prevent refetch
+  const loadedTabsRef = useRef<Set<TabType>>(new Set(['profile']));
+  
   // Check if academy is approved or active
   const isOperational = academy.status === 'approved' || academy.status === 'active';
 
@@ -41,8 +44,17 @@ export const AdminAcademyProfileView: React.FC<AdminAcademyProfileViewProps> = (
     loadData();
   }, []);
 
+  // Reset cache when academy changes
   useEffect(() => {
-    if (isOperational && activeTab !== 'profile') {
+    loadedTabsRef.current = new Set(['profile']);
+  }, [academy.id]);
+
+  useEffect(() => {
+    // Only load tab data if:
+    // 1. Academy is operational
+    // 2. Not on profile tab
+    // 3. Tab hasn't been loaded yet (not in cache)
+    if (isOperational && activeTab !== 'profile' && !loadedTabsRef.current.has(activeTab)) {
       loadTabData();
     }
   }, [activeTab, isOperational, academy.id]);
@@ -59,7 +71,6 @@ export const AdminAcademyProfileView: React.FC<AdminAcademyProfileViewProps> = (
       setLocations(locationsData || []);
       setSkills(skillsData || []);
     } catch (err) {
-      console.error('Error loading data:', err);
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
       setLoading(false);
@@ -105,8 +116,9 @@ export const AdminAcademyProfileView: React.FC<AdminAcademyProfileViewProps> = (
           break;
         }
       }
+      // Mark tab as loaded (cache it) after successful load
+      loadedTabsRef.current.add(activeTab);
     } catch (err) {
-      console.error('Error loading tab data:', err);
       setDataError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
       setDataLoading(false);

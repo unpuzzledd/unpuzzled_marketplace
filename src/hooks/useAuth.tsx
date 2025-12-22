@@ -17,61 +17,52 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const initializingRef = useRef(false)
+  const mountedRef = useRef(true)
 
   useEffect(() => {
-    let mounted = true
+    mountedRef.current = true
     
     // Prevent double initialization (React Strict Mode issue)
     if (initializingRef.current) {
-      console.log('⚠️ Already initializing, skipping...')
       return
     }
     
     initializingRef.current = true
 
-    // Safety timeout to prevent infinite loading
+    // Safety timeout - reduced to 3 seconds for faster feedback
     const timeout = setTimeout(() => {
-      console.warn('⏰ Auth loading timeout - forcing loading to false')
-      if (mounted) {
+      if (mountedRef.current) {
         setLoading(false)
         initializingRef.current = false
       }
-    }, 10000) // 10 second timeout
+    }, 3000)
 
     // Get initial session
     const initializeAuth = async () => {
       try {
-        console.log('🔵 Starting getSession...')
         const { data: { session }, error } = await supabase.auth.getSession()
         
         if (error) {
-          console.error('❌ Error getting session:', error)
-          if (mounted) {
+          if (mountedRef.current) {
             setLoading(false)
             initializingRef.current = false
           }
           return
         }
-
-        console.log('🔵 getSession completed. Session:', session?.user?.id || 'No session')
         
         if (session?.user) {
-          console.log('🔵 About to fetch user profile...')
           await fetchUserProfile(session.user)
-          console.log('🔵 fetchUserProfile completed!')
         } else {
-          console.log('🔵 No session, setting loading to false')
-          if (mounted) {
+          if (mountedRef.current) {
             setLoading(false)
           }
         }
         
-        if (mounted) {
+        if (mountedRef.current) {
           initializingRef.current = false
         }
       } catch (error) {
-        console.error('❌ Error in initializeAuth:', error)
-        if (mounted) {
+        if (mountedRef.current) {
           setLoading(false)
           initializingRef.current = false
         }
@@ -82,20 +73,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     initializeAuth()
 
-    // Listen for auth changes (only after initialization)
+    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('🟡 Auth state change event:', event)
-        // Skip if still initializing to prevent race condition
-        if (initializingRef.current) {
-          console.log('⚠️ Skipping auth state change - still initializing')
+        // For SIGNED_IN event, always process (user just logged in)
+        if (event === 'SIGNED_IN' && session?.user) {
+          initializingRef.current = false // Reset for new sign in
+          setLoading(true)
+          await fetchUserProfile(session.user)
+          return
+        }
+        
+        // For SIGNED_OUT, clear state immediately
+        if (event === 'SIGNED_OUT') {
+          initializingRef.current = false // Reset for next sign in
+          if (mountedRef.current) {
+            setUser(null)
+            setLoading(false)
+          }
+          return
+        }
+        
+        // Skip INITIAL_SESSION if still initializing to prevent race condition
+        if (initializingRef.current && event === 'INITIAL_SESSION') {
           return
         }
 
         if (session?.user) {
           await fetchUserProfile(session.user)
         } else {
-          if (mounted) {
+          if (mountedRef.current) {
             setUser(null)
             setLoading(false)
           }
@@ -104,7 +111,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     )
 
     return () => {
-      mounted = false
+      mountedRef.current = false
       subscription.unsubscribe()
       clearTimeout(timeout)
     }
@@ -112,17 +119,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchUserProfile = async (authUser: SupabaseUser) => {
     try {
-      console.log('Fetching user profile for:', authUser.id)
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', authUser.id)
         .maybeSingle()
 
-      console.log('Query result - data:', data, 'error:', error)
-
       if (error) {
-        console.error('Error fetching user profile:', error)
         setUser(null)
         setLoading(false)
         return
@@ -130,7 +133,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       // If user not found, try to create the user record (fallback for trigger issues)
       if (!data) {
-        console.log('User not found in public.users, creating record...')
         const { data: newUser, error: createError } = await supabase
           .from('users')
           .insert({
@@ -142,22 +144,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .maybeSingle()
 
         if (createError || !newUser) {
-          console.error('Error creating user record:', createError)
           setUser(null)
           setLoading(false)
           return
         }
 
-        console.log('User created successfully:', newUser)
         setUser(newUser)
         setLoading(false)
       } else {
-        console.log('User profile fetched successfully:', data)
         setUser(data)
         setLoading(false)
       }
     } catch (error) {
-      console.error('Error in fetchUserProfile:', error)
       setUser(null)
       setLoading(false)
     }
@@ -178,7 +176,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       })
       if (error) throw error
     } catch (error) {
-      console.error('Error signing up with Google:', error)
       alert('Error signing up with Google. Please try again.')
     } finally {
       setLoading(false)
@@ -196,7 +193,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       })
       if (error) throw error
     } catch (error) {
-      console.error('Error signing in with Google:', error)
       alert('Error signing in with Google. Please try again.')
     } finally {
       setLoading(false)
@@ -214,7 +210,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       })
       if (error) throw error
     } catch (error) {
-      console.error('Error signing in with Google:', error)
       alert('Error signing in with Google. Please try again.')
     } finally {
       setLoading(false)
@@ -223,20 +218,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     try {
-      setLoading(true)
-      // Clear user state immediately for faster UI feedback
+      // Clear state immediately for faster UI feedback
       setUser(null)
+      setLoading(false)
+      initializingRef.current = false // Reset for next sign in
       // Sign out from Supabase
       const { error } = await supabase.auth.signOut()
       if (error) throw error
       // Use window.location for a clean navigation
       window.location.href = '/'
     } catch (error) {
-      console.error('Error signing out:', error)
       alert('Error signing out. Please try again.')
       setLoading(false)
     }
-    // Note: Don't set loading to false in finally as we're navigating away
   }
 
   const updateUserRole = async (role: 'student' | 'teacher' | 'academy_owner'): Promise<{ success: boolean; error?: string }> => {
@@ -271,7 +265,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .single()
 
       if (fetchError) {
-        console.error('Error fetching user:', fetchError)
         return { success: false, error: 'Failed to verify user account' }
       }
 
@@ -299,14 +292,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .single()
 
       if (error) {
-        console.error('Error updating user role:', error)
         return { success: false, error: error.message }
       }
 
       setUser(data)
       return { success: true }
     } catch (error) {
-      console.error('Error updating user role:', error)
       const errorMessage = error instanceof Error ? error.message : 'Error updating role. Please try again.'
       return { success: false, error: errorMessage }
     } finally {

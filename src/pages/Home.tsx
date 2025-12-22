@@ -20,7 +20,6 @@ const Home = () => {
   // Redirect authenticated users to their dashboard
   useEffect(() => {
     if (!loading && user) {
-      console.log('🏠 Home: User is authenticated, redirecting...')
       
       // Check if user is admin - only redirect if they have admin session
       if (user.role === 'admin' || user.role === 'super_admin') {

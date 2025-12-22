@@ -18,21 +18,14 @@ const StudentCourses = () => {
   useEffect(() => {
     // Only run redirects after loading is complete
     if (loading) {
-      console.log('StudentCourses: Auth still loading...')
       return
     }
 
-    console.log('StudentCourses: Auth loaded. User:', user?.email, 'Role:', user?.role)
-
     if (user) {
       if (user.role !== 'student') {
-        console.log('StudentCourses: User is not a student, redirecting to home')
         navigate('/')
-        } else {
-        console.log('StudentCourses: User is a student, staying on page')
       }
     } else {
-      console.log('StudentCourses: No user found, redirecting to home')
       navigate('/')
     }
   }, [user, loading, navigate])
@@ -49,7 +42,7 @@ const StudentCourses = () => {
           setBatches(batchesRes.data)
         }
       } catch (error) {
-        console.error('Error fetching batches:', error)
+        // Silent catch
       } finally {
         setDataLoading(false)
       }

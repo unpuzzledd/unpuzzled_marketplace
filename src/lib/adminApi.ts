@@ -279,27 +279,6 @@ export class AdminApi {
     status?: string
   ): Promise<PaginatedResponse<Academy>> {
     try {
-      console.log('Fetching academies with params:', { page, pageSize, status });
-      
-      // First, check current user and their role
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      console.log('🔐 Current auth user:', authUser?.id, authUser?.email);
-      
-      if (authUser) {
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('id, email, role')
-          .eq('id', authUser.id)
-          .single();
-        
-        console.log('👤 User data from database:', userData);
-        console.log('👤 User role:', userData?.role);
-        if (userError) {
-          console.error('❌ Error fetching user data:', userError);
-        }
-      }
-      
-      // First, try to get academies without the owner join to see if that works
       let query = supabase
         .from('academies')
         .select('*', { count: 'exact' });
@@ -313,13 +292,6 @@ export class AdminApi {
         .range((page - 1) * pageSize, page * pageSize - 1);
 
       if (academiesError) {
-        console.error('❌ Error fetching academies:', academiesError);
-        console.error('Error details:', {
-          message: academiesError.message,
-          details: academiesError.details,
-          hint: academiesError.hint,
-          code: academiesError.code
-        });
         return {
           data: [],
           count: 0,
@@ -329,9 +301,6 @@ export class AdminApi {
           error: academiesError.message
         };
       }
-
-      console.log('✅ Academies fetched:', academiesData?.length || 0, 'Count:', count);
-      console.log('Academies data:', academiesData);
 
       // Now try to get owner info separately if academies exist
       let academiesWithOwners = academiesData || [];
@@ -353,8 +322,6 @@ export class AdminApi {
               ...academy,
               owner: ownersMap.get(academy.owner_id) || null
             }));
-          } else {
-            console.warn('Could not fetch owner info:', ownersError);
           }
         }
       }
@@ -369,7 +336,6 @@ export class AdminApi {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to fetch academies';
-      console.error('Exception in getAcademies:', error);
       return {
         data: [],
         count: 0,
@@ -1304,47 +1270,14 @@ export class AdminApi {
    */
   static async getAcademyTeachers(academyId: string): Promise<ApiResponse<any[]>> {
     try {
-      console.log('Fetching teachers for academy:', academyId);
-      
-      // Test connection first
-      const { data: testData, error: testError } = await supabase
-        .from('users')
-        .select('id, full_name, email')
-        .limit(1);
-      
-      console.log('Supabase connection test:', { testData, testError });
-      
-      // Check current authenticated user
-      const { data: { user } } = await supabase.auth.getUser();
-      console.log('Current authenticated user:', user?.id);
-      
-      // Test specific teacher IDs
-      const { data: specificTest, error: specificError } = await supabase
-        .from('users')
-        .select('id, full_name, email')
-        .in('id', ['5b4d82df-2e8b-49cf-af11-7b611ae95267', 'f6227b7a-9b0d-4ef5-8637-0b5383196531', 'f9dd7193-6225-471b-a424-26a8e62779f8']);
-      
-      console.log('Specific teacher IDs test:', { specificTest, specificError });
-      
-      // Test with a single ID first
-      const { data: singleTest, error: singleError } = await supabase
-        .from('users')
-        .select('id, full_name, email')
-        .eq('id', '5b4d82df-2e8b-49cf-af11-7b611ae95267');
-      
-      console.log('Single teacher ID test:', { singleTest, singleError });
-      
-      // First get teacher assignments
+      // Get teacher assignments
       const { data: assignments, error: assignmentsError } = await supabase
         .from('teacher_assignments')
         .select('*')
         .eq('academy_id', academyId)
         .order('created_at', { ascending: false });
 
-      console.log('Teacher assignments:', assignments);
-
       if (assignmentsError) {
-        console.error('Error fetching assignments:', assignmentsError);
         return { data: null, error: assignmentsError.message };
       }
 
@@ -1354,38 +1287,18 @@ export class AdminApi {
 
       // Get teacher details for each assignment
       const teacherIds = assignments.map(assignment => assignment.teacher_id);
-      console.log('Teacher IDs:', teacherIds);
       
       const { data: teachers, error: teachersError } = await supabase
         .from('users')
         .select('*')
         .in('id', teacherIds);
 
-      console.log('Teachers data:', teachers);
-      console.log('Teachers data length:', teachers?.length);
-      console.log('Teachers error:', teachersError);
-      console.log('Query details:', { teacherIds, query: 'users table with IN clause' });
-      
-      // Log each teacher individually
-      if (teachers && teachers.length > 0) {
-        teachers.forEach((teacher, index) => {
-          console.log(`Teacher ${index}:`, {
-            id: teacher.id,
-            full_name: teacher.full_name,
-            email: teacher.email
-          });
-        });
-      } else {
-        console.log('No teachers found in the query result');
-      }
-
       if (teachersError) {
-        console.error('Error fetching teachers:', teachersError);
         return { data: null, error: teachersError.message };
       }
 
       // Get batch information for each teacher
-      const { data: teacherBatches, error: batchesError } = await supabase
+      const { data: teacherBatches } = await supabase
         .from('batches')
         .select(`
           id,
@@ -1398,19 +1311,11 @@ export class AdminApi {
         .in('teacher_id', teacherIds)
         .eq('academy_id', academyId);
 
-      if (batchesError) {
-        console.error('Error fetching teacher batches:', batchesError);
-      }
-
       // Combine the data
       const combinedData = assignments.map(assignment => {
         const foundTeacher = teachers?.find(teacher => teacher.id === assignment.teacher_id);
         const teacherBatchesData = teacherBatches?.filter(batch => batch.teacher_id === assignment.teacher_id) || [];
         
-        console.log(`Looking for teacher ${assignment.teacher_id}:`, foundTeacher ? 'FOUND' : 'NOT FOUND');
-        if (foundTeacher) {
-          console.log('Found teacher details:', { id: foundTeacher.id, name: foundTeacher.full_name });
-        }
         return {
           ...assignment,
           teacher: foundTeacher || null,
@@ -1418,11 +1323,8 @@ export class AdminApi {
         };
       });
 
-      console.log('Combined teachers data:', JSON.stringify(combinedData, null, 2));
-
       return { data: combinedData, error: null };
     } catch (error) {
-      console.error('Error in getAcademyTeachers:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to get academy teachers';
       return { data: null, error: errorMessage };
     }
@@ -1460,7 +1362,7 @@ export class AdminApi {
       }
 
       // Get batch enrollments for each student
-      const { data: batchEnrollments, error: batchEnrollmentsError } = await supabase
+      const { data: batchEnrollments } = await supabase
         .from('batch_enrollments')
         .select(`
           id,
@@ -1476,10 +1378,6 @@ export class AdminApi {
           )
         `)
         .in('student_id', studentIds);
-
-      if (batchEnrollmentsError) {
-        console.error('Error fetching student batch enrollments:', batchEnrollmentsError);
-      }
 
       // Combine the data
       const combinedData = enrollments.map(enrollment => {
@@ -1538,15 +1436,12 @@ export class AdminApi {
 
       // Get student counts for each batch
       const batchIds = batches.map(batch => batch.id);
-      const { data: batchEnrollments, error: enrollmentsError } = await supabase
+      const { data: batchEnrollments } = await supabase
         .from('batch_enrollments')
         .select('batch_id')
         .in('batch_id', batchIds)
         .eq('status', 'active');
 
-      if (enrollmentsError) {
-        console.error('Error fetching batch enrollments:', enrollmentsError);
-      }
 
       // Count students per batch
       const studentCounts = new Map<string, number>();
@@ -1745,16 +1640,13 @@ export class AdminApi {
       }
 
       // Unassign teacher from all batches in this academy
-      const { error: batchesError } = await supabase
+      await supabase
         .from('batches')
         .update({ teacher_id: null })
         .eq('academy_id', assignment.academy_id)
         .eq('teacher_id', assignment.teacher_id);
 
-      if (batchesError) {
-        console.error('Error unassigning teacher from batches:', batchesError);
-        // Continue with removal even if batch update fails
-      }
+      // Continue with removal even if batch update fails
 
       // Delete the teacher assignment
       const { error } = await supabase

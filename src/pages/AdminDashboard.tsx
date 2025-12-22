@@ -23,18 +23,8 @@ const AdminDashboard = () => {
     const adminSessionFromStorage = localStorage.getItem('admin_session')
     const hasAdminSession = !!adminSessionFromStorage
     
-    console.log('AdminDashboard auth check:', { 
-      loading, 
-      isAuthenticated, 
-      adminUser,
-      hasAdminSession,
-      pathname: window.location.pathname,
-      hasCodeParam: window.location.search.includes('code=')
-    })
-    
     // Never redirect while loading - wait for authentication to complete
     if (loading) {
-      console.log('Still loading, waiting for authentication...')
       return
     }
     
@@ -46,12 +36,10 @@ const AdminDashboard = () => {
     if (hasAdminSession) {
       // If React state hasn't caught up yet, wait a bit for it to sync
       if (!isAuthenticated || !adminUser) {
-        console.log('Admin session in localStorage but state not updated, waiting for sync...')
         const syncTimer = setTimeout(() => {
           // Re-check after a brief delay
           const stillHasSession = localStorage.getItem('admin_session')
           if (!stillHasSession && !isAuthenticated) {
-            console.log('Session lost during sync, redirecting to signin')
             navigate('/admin/signin')
           }
         }, 500)
@@ -60,7 +48,6 @@ const AdminDashboard = () => {
       
       // Clean OAuth code from URL if present
       if (isOAuthCallback) {
-        console.log('OAuth callback successful, cleaning URL...')
         window.history.replaceState({}, '', window.location.pathname)
       }
       return // Authenticated, no redirect needed
@@ -68,15 +55,11 @@ const AdminDashboard = () => {
     
     // No admin session - check if we're processing OAuth callback
     if (isOAuthCallback) {
-      console.log('OAuth callback detected but no session yet, waiting...')
       const redirectTimer = setTimeout(() => {
         // Final check - re-read localStorage (source of truth)
         const finalCheckSession = localStorage.getItem('admin_session')
         if (!finalCheckSession) {
-          console.log('Still not authenticated after OAuth callback delay, redirecting to signin')
           navigate('/admin/signin')
-        } else {
-          console.log('Admin session found after delay, authentication successful')
         }
       }, 6000) // 6 seconds to give callback plenty of time
       
@@ -85,7 +68,6 @@ const AdminDashboard = () => {
     
     // Not loading, not authenticated, and not OAuth callback - redirect to signin
     if (!isAuthenticated && !hasAdminSession) {
-      console.log('Not authenticated, redirecting to signin')
       navigate('/admin/signin')
     }
     

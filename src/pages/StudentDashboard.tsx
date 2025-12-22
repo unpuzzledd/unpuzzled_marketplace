@@ -60,15 +60,11 @@ const StudentDashboard = () => {
   useEffect(() => {
     // Only run redirects after loading is complete
     if (loading) {
-      console.log('StudentDashboard: Auth still loading...')
       return
     }
 
-    console.log('StudentDashboard: Auth loaded. User:', user?.email, 'Role:', user?.role)
-
     if (user) {
       if (user.role !== 'student') {
-        console.log('StudentDashboard: User is not a student, redirecting...')
         // Redirect non-students to appropriate page
         if (user.role === 'admin' || user.role === 'super_admin') {
           navigate('/admin')
@@ -79,11 +75,8 @@ const StudentDashboard = () => {
         } else {
           navigate('/')
         }
-      } else {
-        console.log('StudentDashboard: User is a student, staying on page')
       }
     } else {
-      console.log('StudentDashboard: No user found, redirecting to home')
       // No user - redirect to home
       navigate('/')
     }
@@ -108,7 +101,7 @@ const StudentDashboard = () => {
         if (activitiesRes.data) setActivities(activitiesRes.data)
         if (statsRes.data) setStatistics(statsRes.data)
       } catch (error) {
-        console.error('Error fetching student data:', error)
+        // Silent catch - data loading error
       } finally {
         setDataLoading(false)
       }
