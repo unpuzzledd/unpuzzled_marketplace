@@ -126,7 +126,17 @@ const AcademyDashboard = () => {
 
       // Set data if available (don't fail on individual errors)
       if (statsResponse.data) setStatistics(statsResponse.data)
-      if (skillsResponse.data) setAcademySkills(skillsResponse.data)
+      if (skillsResponse.data) {
+        console.log('🟢 [AcademyDashboard] Fetched academy skills:', {
+          academyId: academyResponse.data.id,
+          skillsCount: skillsResponse.data.length,
+          skills: skillsResponse.data.map(s => ({ id: s.id, name: s.name })),
+          skillIds: academyResponse.data.skill_ids
+        })
+        setAcademySkills(skillsResponse.data)
+      } else if (skillsResponse.error) {
+        console.error('❌ [AcademyDashboard] Error fetching skills:', skillsResponse.error)
+      }
       if (teachersResponse.data) setTeachers(teachersResponse.data)
       if (studentsResponse.data) setStudents(studentsResponse.data)
       if (batchesResponse.data) setBatches(batchesResponse.data)
@@ -349,9 +359,16 @@ const AcademyDashboard = () => {
 
   // Use real academy skills instead of hardcoded activities
   const activities = academySkills.map(skill => ({
+    id: skill.id,
     name: skill.name,
     image: 'https://api.builder.io/api/v1/image/assets/TEMP/4c88c0a5855eb4415bad44ff5c61d4454f8e5509?width=496' // Default image for now
   }))
+  
+  console.log('🔵 [AcademyDashboard] Activities to display:', {
+    activitiesCount: activities.length,
+    activities: activities.map(a => ({ id: a.id, name: a.name })),
+    academySkillsCount: academySkills.length
+  })
 
   const upcomingActivities = academySkills.map(skill => skill.name)
 
@@ -646,25 +663,30 @@ const AcademyDashboard = () => {
                 </button>
               </div>
               
-              <div className="flex items-start self-stretch">
+              <div className="flex items-start self-stretch gap-4 overflow-x-auto pb-2">
                     {activities.length > 0 ? (
-                <div className="flex w-[280px] px-4 flex-col items-start">
-                  <div className="flex flex-col justify-center items-center self-stretch rounded-xl">
-                    <img 
-                            src={activities[0].image} 
-                            alt={activities[0].name} 
-                      className="h-[157px] self-stretch rounded-xl"
-                    />
-                    <div className="flex h-[101px] flex-col justify-center items-center gap-4 self-stretch">
-                            <span className="text-base font-bold text-[#0F1717] leading-5">{activities[0].name}</span>
-                      <button className="flex h-8 min-w-[84px] max-w-[480px] px-4 justify-center items-center flex-shrink-0 bg-[#F0F5F2] rounded-2xl">
-                        <span className="text-sm text-[#0F1717] leading-[21px] overflow-hidden text-ellipsis whitespace-nowrap text-center">Manage</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                      activities.map((activity) => (
+                        <div key={activity.id} className="flex w-[280px] px-4 flex-col items-start flex-shrink-0">
+                          <div className="flex flex-col justify-center items-center self-stretch rounded-xl">
+                            <img 
+                              src={activity.image} 
+                              alt={activity.name} 
+                              className="h-[157px] self-stretch rounded-xl object-cover"
+                            />
+                            <div className="flex h-[101px] flex-col justify-center items-center gap-4 self-stretch">
+                              <span className="text-base font-bold text-[#0F1717] leading-5">{activity.name}</span>
+                              <button 
+                                onClick={() => setActiveTab('profile')}
+                                className="flex h-8 min-w-[84px] max-w-[480px] px-4 justify-center items-center flex-shrink-0 bg-[#F0F5F2] rounded-2xl hover:bg-[#E5F5F0] transition-colors"
+                              >
+                                <span className="text-sm text-[#0F1717] leading-[21px] overflow-hidden text-ellipsis whitespace-nowrap text-center">Manage</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
                     ) : (
-                      <div className="flex w-[280px] px-4 flex-col items-start">
+                      <div className="flex w-[280px] px-4 flex-col items-start flex-shrink-0">
                         <div className="flex flex-col justify-center items-center self-stretch rounded-xl bg-[#F0F5F2] h-[258px]">
                           <div className="text-center">
                             <div className="text-4xl mb-2">📚</div>
@@ -675,11 +697,14 @@ const AcademyDashboard = () => {
                       </div>
                     )}
                 
-                <div className="flex w-[280px] px-4 flex-col items-start">
-                  <div className="flex px-[69px] pt-16 pb-20 flex-col items-center gap-[29px] self-stretch bg-[#F0F5F2] rounded-xl relative">
+                <div className="flex w-[280px] px-4 flex-col items-start flex-shrink-0">
+                  <button
+                    onClick={() => setShowAddActivityModal(true)}
+                    className="flex px-[69px] pt-16 pb-20 flex-col items-center gap-[29px] self-stretch bg-[#F0F5F2] rounded-xl relative hover:bg-[#E5F5F0] transition-colors cursor-pointer w-full"
+                  >
                     <div className="text-[89px] font-thin text-[#0F1717] text-center overflow-hidden text-ellipsis whitespace-nowrap opacity-50 absolute left-26 top-16 w-[52px] h-16 flex justify-center items-center">+</div>
                     <div className="text-sm text-[#0F1717] leading-[21px] text-center overflow-hidden text-ellipsis absolute left-[82px] top-[157px] w-[97px] h-[21px]">Add Activity</div>
-                  </div>
+                  </button>
                 </div>
               </div>
             </div>
