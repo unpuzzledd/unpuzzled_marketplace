@@ -134,13 +134,17 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
       
       // Process admin authentication
       const email = session.user.email || ''
+      const userId = session.user.id
       console.log('🟢 [AdminAuth] User email:', email)
-      console.log('🟢 [AdminAuth] Checking if admin email...')
-      const isAdmin = isAdminEmail(email)
-      console.log('🟢 [AdminAuth] Is admin email:', isAdmin)
+      console.log('🟢 [AdminAuth] User ID:', userId)
+      console.log('🟢 [AdminAuth] Checking if admin...')
       
-      if (isAdmin) {
-          const adminRole = email === 'superadmin@unpuzzled.com' ? 'super_admin' : 'admin'
+      // Check if user is admin by checking database admins table or users role
+      const isAdmin = await checkAdminStatus(userId, email)
+      console.log('🟢 [AdminAuth] Is admin:', isAdmin)
+      
+      if (isAdmin.isAdmin) {
+          const adminRole = isAdmin.role || (email === 'superadmin@unpuzzled.com' ? 'super_admin' : 'admin')
           console.log('🟢 [AdminAuth] Admin role determined:', adminRole)
           console.log('🟢 [AdminAuth] About to sync admin role to database...')
           
@@ -202,7 +206,8 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
             'admin@unpuzzled.com',
             'superadmin@unpuzzled.com',
             'unpuzzleclub@gmail.com',
-            'neeraj.7always@gmail.com'
+            'neeraj.7always@gmail.com',
+            'mjinesh40@gmail.com'
           ])
           await supabase.auth.signOut()
           alert(`Access denied. Email "${email}" is not authorized for admin access.`)
@@ -359,16 +364,80 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [])
 
-  // Check if user is admin by email
+  // Check if user is admin by email (fallback for hardcoded emails)
   const isAdminEmail = (email: string): boolean => {
     const adminEmails = [
       'admin@unpuzzled.com',
       'superadmin@unpuzzled.com',
       'unpuzzleclub@gmail.com', // Admin email
       'neeraj.7always@gmail.com', // Admin email
+      'mjinesh40@gmail.com', // Admin email
       // Add more admin emails here as needed
     ]
     return adminEmails.includes(email.toLowerCase())
+  }
+
+  // Check admin status from database (admins table or users role)
+  const checkAdminStatus = async (userId: string, email: string): Promise<{ isAdmin: boolean; role?: 'admin' | 'super_admin' }> => {
+    try {
+      // First check if user exists in admins table with active status
+      const { data: adminData, error: adminError } = await supabase
+        .from('admins')
+        .select(`
+          status,
+          user:users!admins_user_id_fkey(role)
+        `)
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .maybeSingle()
+
+      if (!adminError && adminData) {
+        console.log('✅ [AdminAuth] Found in admins table:', adminData)
+        // Get role from users table
+        const userRole = (adminData.user as any)?.role
+        return { 
+          isAdmin: true, 
+          role: userRole === 'super_admin' ? 'super_admin' : 'admin' 
+        }
+      }
+
+      // Check users table for admin role
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', userId)
+        .maybeSingle()
+
+      if (!userError && userData && (userData.role === 'admin' || userData.role === 'super_admin')) {
+        console.log('✅ [AdminAuth] Found admin role in users table:', userData.role)
+        return { 
+          isAdmin: true, 
+          role: userData.role as 'admin' | 'super_admin' 
+        }
+      }
+
+      // Fallback to hardcoded email check
+      if (isAdminEmail(email)) {
+        console.log('✅ [AdminAuth] Found in hardcoded admin emails list')
+        return { 
+          isAdmin: true, 
+          role: email === 'superadmin@unpuzzled.com' ? 'super_admin' : 'admin' 
+        }
+      }
+
+      console.log('❌ [AdminAuth] User is not an admin')
+      return { isAdmin: false }
+    } catch (error) {
+      console.error('❌ [AdminAuth] Error checking admin status:', error)
+      // Fallback to email check on error
+      if (isAdminEmail(email)) {
+        return { 
+          isAdmin: true, 
+          role: email === 'superadmin@unpuzzled.com' ? 'super_admin' : 'admin' 
+        }
+      }
+      return { isAdmin: false }
+    }
   }
 
   const adminSignInWithGoogle = async (): Promise<void> => {
