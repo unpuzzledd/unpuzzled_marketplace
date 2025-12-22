@@ -39,10 +39,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Get initial session
     const initializeAuth = async () => {
+      console.log('🔵 initializeAuth starting...')
       try {
         const { data: { session }, error } = await supabase.auth.getSession()
         
+        console.log('🔵 getSession result:', { hasSession: !!session, hasUser: !!session?.user, error })
+        
         if (error) {
+          console.error('❌ getSession error:', error)
           if (mountedRef.current) {
             setLoading(false)
             initializingRef.current = false
@@ -51,8 +55,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
         
         if (session?.user) {
+          console.log('🔵 Session found, fetching user profile...')
           await fetchUserProfile(session.user)
         } else {
+          console.log('🔵 No session, setting loading false')
           if (mountedRef.current) {
             setLoading(false)
           }
@@ -61,7 +67,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (mountedRef.current) {
           initializingRef.current = false
         }
+        console.log('✅ initializeAuth complete')
       } catch (error) {
+        console.error('❌ initializeAuth exception:', error)
         if (mountedRef.current) {
           setLoading(false)
           initializingRef.current = false
@@ -76,16 +84,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('🟡 Auth state change:', event, { hasSession: !!session, hasUser: !!session?.user })
+        
         // For SIGNED_IN event, always process (user just logged in)
         if (event === 'SIGNED_IN' && session?.user) {
+          console.log('🟡 SIGNED_IN - processing...')
           initializingRef.current = false // Reset for new sign in
-          setLoading(true)
+          if (mountedRef.current) {
+            setLoading(true)
+          }
           await fetchUserProfile(session.user)
           return
         }
         
         // For SIGNED_OUT, clear state immediately
         if (event === 'SIGNED_OUT') {
+          console.log('🟡 SIGNED_OUT - clearing state')
           initializingRef.current = false // Reset for next sign in
           if (mountedRef.current) {
             setUser(null)
@@ -96,12 +110,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         // Skip INITIAL_SESSION if still initializing to prevent race condition
         if (initializingRef.current && event === 'INITIAL_SESSION') {
+          console.log('🟡 INITIAL_SESSION skipped (still initializing)')
           return
         }
 
         if (session?.user) {
+          console.log('🟡 Session user found, fetching profile...')
           await fetchUserProfile(session.user)
         } else {
+          console.log('🟡 No session user, clearing state')
           if (mountedRef.current) {
             setUser(null)
             setLoading(false)
@@ -118,6 +135,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [])
 
   const fetchUserProfile = async (authUser: SupabaseUser) => {
+    console.log('🔵 fetchUserProfile called for:', authUser.id, authUser.email)
     try {
       const { data, error } = await supabase
         .from('users')
@@ -125,14 +143,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .eq('id', authUser.id)
         .maybeSingle()
 
+      console.log('🔵 fetchUserProfile query result:', { data, error })
+
       if (error) {
-        setUser(null)
-        setLoading(false)
+        console.error('❌ fetchUserProfile error:', error)
+        if (mountedRef.current) {
+          setUser(null)
+          setLoading(false)
+        }
         return
       }
 
       // If user not found, try to create the user record (fallback for trigger issues)
       if (!data) {
+        console.log('🔵 User not found, creating record...')
         const { data: newUser, error: createError } = await supabase
           .from('users')
           .insert({
@@ -143,21 +167,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .select()
           .maybeSingle()
 
+        console.log('🔵 Create user result:', { newUser, createError })
+
         if (createError || !newUser) {
-          setUser(null)
-          setLoading(false)
+          console.error('❌ Failed to create user:', createError)
+          if (mountedRef.current) {
+            setUser(null)
+            setLoading(false)
+          }
           return
         }
 
-        setUser(newUser)
-        setLoading(false)
+        if (mountedRef.current) {
+          console.log('✅ User created, setting state:', newUser)
+          setUser(newUser)
+          setLoading(false)
+        }
       } else {
-        setUser(data)
-        setLoading(false)
+        if (mountedRef.current) {
+          console.log('✅ User found, setting state:', data)
+          setUser(data)
+          setLoading(false)
+        }
       }
     } catch (error) {
-      setUser(null)
-      setLoading(false)
+      console.error('❌ fetchUserProfile exception:', error)
+      if (mountedRef.current) {
+        setUser(null)
+        setLoading(false)
+      }
     }
   }
 
