@@ -12,6 +12,7 @@ const BatchManagement = () => {
   const [selectedBatch, setSelectedBatch] = useState<Batch | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const batches: Batch[] = Array(8).fill(null).map((_, i) => ({
     id: `batch-${i}`,
@@ -33,8 +34,18 @@ const BatchManagement = () => {
   return (
     <div className="flex flex-col min-h-screen bg-white">
       {/* Header */}
-      <header className="flex px-10 py-3 justify-between items-center border-b border-[#E5E8EB]">
-        <div className="flex items-center gap-4">
+      <header className="flex px-4 sm:px-6 md:px-10 py-3 justify-between items-center border-b border-[#E5E8EB]">
+        <div className="flex items-center gap-2 sm:gap-4">
+          {/* Hamburger Menu Button - Mobile Only */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden p-2 -ml-2"
+            aria-label="Toggle menu"
+          >
+            <svg className="w-6 h-6 text-[#0F1717]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
           <div className="flex flex-col items-start">
             <div className="w-4 flex-1 relative">
               <svg style={{ width: '16px', height: '16px', fill: '#0F1717' }} width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -42,14 +53,14 @@ const BatchManagement = () => {
               </svg>
             </div>
           </div>
-          <h1 className="font-lexend text-lg font-bold leading-[23px] text-[#0F1717]">Unpuzzle Club</h1>
+          <h1 className="font-lexend text-base sm:text-lg font-bold leading-[23px] text-[#0F1717]">Unpuzzle Club</h1>
         </div>
         
-        <div className="flex justify-end items-start gap-8 flex-1">
-          <div className="flex h-10 items-center gap-9">
+        <div className="flex justify-end items-start gap-2 sm:gap-4 md:gap-8 flex-1">
+          <div className="hidden md:flex h-10 items-center gap-6 lg:gap-9">
             <span className="font-lexend text-sm font-normal leading-[21px] text-[#0F1717]">Home</span>
           </div>
-          <div className="flex h-10 max-w-[480px] px-[10px] justify-center items-center gap-2 rounded-[20px] bg-[#F0F5F2]">
+          <div className="hidden md:flex h-10 max-w-[480px] px-[10px] justify-center items-center gap-2 rounded-[20px] bg-[#F0F5F2]">
             <div className="flex flex-col items-center flex-1">
               <div className="flex-1 self-stretch">
                 <svg style={{ width: '20px', height: '20px', fill: '#0F1717' }} width="16" height="18" viewBox="0 0 16 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -61,18 +72,38 @@ const BatchManagement = () => {
           <img 
             src="https://api.builder.io/api/v1/image/assets/TEMP/ec3fd35c54906d1a891fbea1c5010977b18a8366?width=80" 
             alt="Profile" 
-            className="w-10 h-10 rounded-[20px]"
+            className="hidden sm:block w-8 h-8 md:w-10 md:h-10 rounded-[20px]"
           />
         </div>
       </header>
 
       {/* Main Content */}
-      <div className="flex min-h-[800px] flex-col items-start self-stretch bg-[#F7FCFA]">
+      <div className="flex min-h-[800px] flex-col items-start self-stretch bg-[#F7FCFA] relative">
+        {/* Mobile Menu Overlay */}
+        {isMobileMenuOpen && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+        )}
+
         <div className="flex flex-col items-start self-stretch">
-          <div className="flex p-6 justify-center items-start self-stretch">
+          <div className="flex p-3 sm:p-4 md:p-6 justify-center items-start self-stretch">
             {/* Sidebar */}
-            <div className="flex w-[320px] h-[808px] flex-col items-start">
-              <div className="flex h-[808px] min-h-[700px] p-4 flex-col justify-between items-start shrink-0 self-stretch rounded-[20px] bg-white">
+            <div className={`fixed md:static inset-y-0 left-0 z-50 md:z-auto flex w-[320px] h-[808px] flex-col items-start transform transition-transform duration-300 ease-in-out md:translate-x-0 ${
+              isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+            }`}>
+              <div className="flex h-[808px] min-h-[700px] p-4 flex-col justify-between items-start shrink-0 self-stretch rounded-[20px] bg-white relative">
+                {/* Close button for mobile */}
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="md:hidden absolute top-4 right-4 p-2"
+                  aria-label="Close menu"
+                >
+                  <svg className="w-6 h-6 text-[#0F1717]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
                 <div className="flex flex-col items-start gap-4 self-stretch">
                   {/* User Profile */}
                   <div className="flex items-start gap-3 self-stretch">
@@ -180,17 +211,17 @@ const BatchManagement = () => {
             </div>
 
             {/* Main Content Area */}
-            <div className="flex max-w-[960px] flex-col items-start flex-1">
+            <div className="flex max-w-[960px] flex-col items-start flex-1 w-full">
               {/* Header Section */}
-              <div className="flex p-4 justify-between items-start content-start gap-3 self-stretch flex-wrap">
-                <div className="flex w-[288px] min-w-[288px] flex-col items-start">
-                  <h2 className="w-[410px] font-inter text-[32px] font-bold leading-10 text-[#121714]">Batch Management</h2>
+              <div className="flex flex-col sm:flex-row p-3 sm:p-4 justify-between items-start content-start gap-3 self-stretch">
+                <div className="flex w-full sm:w-[288px] sm:min-w-[288px] flex-col items-start">
+                  <h2 className="w-full sm:w-[410px] font-inter text-2xl sm:text-3xl md:text-[32px] font-bold leading-tight sm:leading-10 text-[#121714]">Batch Management</h2>
                 </div>
-                <div className="flex w-[430px] justify-end items-center gap-4">
-                  <div className="flex h-10 min-w-[84px] max-w-[480px] px-4 justify-center items-center rounded-lg bg-[#009963]">
+                <div className="flex w-full sm:w-[430px] justify-start sm:justify-end items-center gap-4">
+                  <div className="flex h-10 w-full sm:w-auto sm:min-w-[84px] sm:max-w-[480px] px-4 justify-center items-center rounded-lg bg-[#009963]">
                     <div className="flex justify-center items-start gap-1">
                       <span className="font-lexend text-sm font-normal leading-[21px] text-white overflow-hidden text-ellipsis line-clamp-1">Chess</span>
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <svg width="20" height="20" className="sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M12.3704 15.8351L18.8001 9.20467C19.2013 8.79094 18.9581 8 18.4297 8H5.5703C5.04189 8 4.79869 8.79094 5.1999 9.20467L11.6296 15.8351C11.8427 16.055 12.1573 16.0549 12.3704 15.8351Z" fill="white"/>
                       </svg>
                     </div>
@@ -199,23 +230,23 @@ const BatchManagement = () => {
               </div>
 
               {/* Search Bar */}
-              <div className="flex px-3 py-4 flex-col items-start self-stretch">
-                <div className="flex h-12 min-w-[160px] flex-col items-start self-stretch">
+              <div className="flex px-3 py-3 sm:py-4 flex-col items-start self-stretch">
+                <div className="flex h-12 min-w-[160px] flex-col items-start self-stretch w-full">
                   <div className="flex items-start flex-1 self-stretch rounded-lg">
-                    <div className="flex pl-4 justify-center items-center self-stretch rounded-l-lg bg-[#F0F5F2]">
+                    <div className="flex pl-3 sm:pl-4 justify-center items-center self-stretch rounded-l-lg bg-[#F0F5F2]">
                       <div className="h-6 flex-1">
-                        <svg style={{ width: '24px', height: '24px', fill: '#638778' }} width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <svg style={{ width: '20px', height: '20px', fill: '#638778' }} className="sm:w-6 sm:h-6" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path fillRule="evenodd" clipRule="evenodd" d="M19.5306 18.4694L14.8366 13.7762C17.6629 10.383 17.3204 5.36693 14.0591 2.38935C10.7978 -0.588237 5.77134 -0.474001 2.64867 2.64867C-0.474001 5.77134 -0.588237 10.7978 2.38935 14.0591C5.36693 17.3204 10.383 17.6629 13.7762 14.8366L18.4694 19.5306C18.7624 19.8237 19.2376 19.8237 19.5306 19.5306C19.8237 19.2376 19.8237 18.7624 19.5306 18.4694V18.4694ZM1.75 8.5C1.75 4.77208 4.77208 1.75 8.5 1.75C12.2279 1.75 15.25 4.77208 15.25 8.5C15.25 12.2279 12.2279 15.25 8.5 15.25C4.77379 15.2459 1.75413 12.2262 1.75 8.5V8.5Z" fill="#638778"/>
                         </svg>
                       </div>
                     </div>
-                    <div className="flex px-4 py-2 items-center flex-1 self-stretch rounded-r-lg bg-[#F0F5F2]">
+                    <div className="flex px-3 sm:px-4 py-2 items-center flex-1 self-stretch rounded-r-lg bg-[#F0F5F2]">
                       <input
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Search batches"
-                        className="w-full bg-transparent font-inter text-base font-normal leading-6 text-[#638778] placeholder:text-[#638778] outline-none"
+                        className="w-full bg-transparent font-inter text-sm sm:text-base font-normal leading-6 text-[#638778] placeholder:text-[#638778] outline-none"
                       />
                     </div>
                   </div>
@@ -223,34 +254,34 @@ const BatchManagement = () => {
               </div>
 
               {/* Batches Grid */}
-              <div className="flex px-4 flex-col items-start gap-3 self-stretch">
-                <div className="flex items-start gap-3 self-stretch">
+              <div className="flex px-2 sm:px-4 flex-col items-start gap-3 self-stretch">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 items-start gap-3 self-stretch w-full">
                   {batches.slice(0, 4).map((batch, index) => (
-                    <div key={index} className="flex pt-6 pb-0 flex-col items-start gap-3 flex-1 self-stretch rounded-2xl bg-white">
-                      <div className="flex px-4 flex-col items-center self-stretch">
+                    <div key={index} className="flex pt-4 sm:pt-6 pb-0 flex-col items-start gap-2 sm:gap-3 flex-1 self-stretch rounded-2xl bg-white">
+                      <div className="flex px-3 sm:px-4 flex-col items-center self-stretch">
                         <img 
                           src="https://api.builder.io/api/v1/image/assets/TEMP/6eee8fb64b42d4d81fee7a7c350ea7e458b5ca2e?width=248" 
                           alt="Batch" 
-                          className="w-[124px] h-[124px] rounded-[72px]"
+                          className="w-[100px] h-[100px] sm:w-[124px] sm:h-[124px] rounded-[50px] sm:rounded-[72px]"
                         />
                       </div>
                       <div className="flex flex-col items-center self-stretch">
                         <div className="flex flex-col items-center self-stretch">
-                          <span className="self-stretch font-inter text-base font-normal leading-6 text-center text-[#121714]">{batch.name}</span>
+                          <span className="self-stretch font-inter text-sm sm:text-base font-normal leading-5 sm:leading-6 text-center text-[#121714]">{batch.name}</span>
                         </div>
                         <div className="flex flex-col items-center self-stretch">
-                          <span className="self-stretch font-inter text-sm font-normal leading-[21px] text-center text-[#638778]">
+                          <span className="self-stretch font-inter text-xs sm:text-sm font-normal leading-5 sm:leading-[21px] text-center text-[#638778]">
                             <span className="font-bold">Teacher:</span> {batch.teacher}
                           </span>
                         </div>
-                        <div className="flex flex-col items-center gap-3 self-stretch">
-                          <span className="self-stretch font-inter text-sm font-normal leading-[21px] text-center text-[#638778]">
+                        <div className="flex flex-col items-center gap-2 sm:gap-3 self-stretch">
+                          <span className="self-stretch font-inter text-xs sm:text-sm font-normal leading-5 sm:leading-[21px] text-center text-[#638778]">
                             <span className="font-bold">students:</span> {batch.students}
                           </span>
-                          <div className="flex w-[175px] h-14 px-4 justify-center items-end gap-3 border-t border-[rgba(0,0,0,0.06)]">
-                            <div className="flex w-[54px] flex-col justify-center items-center gap-2 shrink-0">
-                              <button className="flex p-[10px] flex-col items-center rounded-[20px] bg-[#F5F0F0]">
-                                <svg width="20" height="20" viewBox="0 0 21 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <div className="flex w-full sm:w-[175px] h-12 sm:h-14 px-3 sm:px-4 justify-center items-end gap-2 sm:gap-3 border-t border-[rgba(0,0,0,0.06)]">
+                            <div className="flex w-[44px] sm:w-[54px] flex-col justify-center items-center gap-2 shrink-0">
+                              <button className="flex p-2 sm:p-[10px] flex-col items-center rounded-[20px] bg-[#F5F0F0] min-h-[44px] sm:min-h-0">
+                                <svg width="18" height="18" className="sm:w-5 sm:h-5" viewBox="0 0 21 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                                   <mask id="mask0_2029_1063" style={{maskType: 'luminance'}} maskUnits="userSpaceOnUse" x="2" y="2" width="17" height="16">
                                     <path d="M2.5 2H18.5V18H2.5V2Z" fill="white"/>
                                   </mask>
@@ -264,19 +295,19 @@ const BatchManagement = () => {
                                 </svg>
                               </button>
                             </div>
-                            <div className="flex w-[54px] flex-col justify-center items-center gap-2 shrink-0">
-                              <button className="flex p-[10px] flex-col items-center rounded-[20px] bg-[#EAEEFF]">
-                                <svg style={{ width: '20px', height: '20px', fill: '#121714' }} width="16" height="17" viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <div className="flex w-[44px] sm:w-[54px] flex-col justify-center items-center gap-2 shrink-0">
+                              <button className="flex p-2 sm:p-[10px] flex-col items-center rounded-[20px] bg-[#EAEEFF] min-h-[44px] sm:min-h-0">
+                                <svg style={{ width: '18px', height: '18px', fill: '#121714' }} className="sm:w-5 sm:h-5" width="16" height="17" viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg">
                                   <path fillRule="evenodd" clipRule="evenodd" d="M15.2586 4.73203L11.768 1.24062C11.5335 1.00614 11.2156 0.874408 10.884 0.874408C10.5524 0.874408 10.2344 1.00614 10 1.24062L0.366406 10.875C0.130923 11.1086 -0.00105974 11.4269 0 11.7586V15.25C0 15.9404 0.559644 16.5 1.25 16.5H4.74141C5.07311 16.5011 5.39139 16.3691 5.625 16.1336L15.2586 6.5C15.4931 6.26557 15.6248 5.94759 15.6248 5.61602C15.6248 5.28445 15.4931 4.96646 15.2586 4.73203V4.73203ZM4.74141 15.25H1.25V11.7586L8.125 4.88359L11.6164 8.375L4.74141 15.25ZM12.5 7.49063L9.00859 4L10.8836 2.125L14.375 5.61562L12.5 7.49063Z" fill="#121714"/>
                                 </svg>
                               </button>
                             </div>
-                            <div className="flex w-[54px] flex-col justify-center items-center gap-2 shrink-0">
+                            <div className="flex w-[44px] sm:w-[54px] flex-col justify-center items-center gap-2 shrink-0">
                               <button 
                                 onClick={() => handleViewBatch(batch)}
-                                className="flex p-[10px] flex-col items-center rounded-[20px] bg-[#F0F5F2]"
+                                className="flex p-2 sm:p-[10px] flex-col items-center rounded-[20px] bg-[#F0F5F2] min-h-[44px] sm:min-h-0"
                               >
-                                <svg style={{ width: '20px', height: '20px', fill: '#121714' }} width="19" height="14" viewBox="0 0 19 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <svg style={{ width: '18px', height: '18px', fill: '#121714' }} className="sm:w-5 sm:h-5" width="19" height="14" viewBox="0 0 19 14" fill="none" xmlns="http://www.w3.org/2000/svg">
                                   <path fillRule="evenodd" clipRule="evenodd" d="M18.8211 6.74687C18.7938 6.68516 18.132 5.21719 16.6609 3.74609C14.7008 1.78594 12.225 0.75 9.5 0.75C6.775 0.75 4.29922 1.78594 2.33906 3.74609C0.867969 5.21719 0.203125 6.6875 0.178906 6.74687C0.107041 6.90852 0.107041 7.09304 0.178906 7.25469C0.20625 7.31641 0.867969 8.78359 2.33906 10.2547C4.29922 12.2141 6.775 13.25 9.5 13.25C12.225 13.25 14.7008 12.2141 16.6609 10.2547C18.132 8.78359 18.7938 7.31641 18.8211 7.25469C18.893 7.09304 18.893 6.90852 18.8211 6.74687V6.74687ZM9.5 12C7.09531 12 4.99453 11.1258 3.25547 9.40234C2.54191 8.69273 1.93483 7.88356 1.45312 7C1.9347 6.11636 2.54179 5.30717 3.25547 4.59766C4.99453 2.87422 7.09531 2 9.5 2C11.9047 2 14.0055 2.87422 15.7445 4.59766C16.4595 5.307 17.0679 6.11619 17.5508 7C16.9875 8.05156 14.5336 12 9.5 12V12ZM9.5 3.25C7.42893 3.25 5.75 4.92893 5.75 7C5.75 9.07107 7.42893 10.75 9.5 10.75C11.5711 10.75 13.25 9.07107 13.25 7C13.2478 4.92982 11.5702 3.25215 9.5 3.25V3.25ZM9.5 9.5C8.11929 9.5 7 8.38071 7 7C7 5.61929 8.11929 4.5 9.5 4.5C10.8807 4.5 12 5.61929 12 7C12 8.38071 10.8807 9.5 9.5 9.5V9.5Z" fill="#121714"/>
                                 </svg>
                               </button>
@@ -288,43 +319,43 @@ const BatchManagement = () => {
                   ))}
                 </div>
 
-                <div className="flex items-start gap-3 self-stretch">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 items-start gap-3 self-stretch w-full">
                   {batches.slice(4, 8).map((batch, index) => (
-                    <div key={index + 4} className="flex pt-6 pb-0 flex-col items-start gap-3 flex-1 self-stretch rounded-2xl bg-white">
-                      <div className="flex px-4 flex-col items-center self-stretch">
+                    <div key={index + 4} className="flex pt-4 sm:pt-6 pb-0 flex-col items-start gap-2 sm:gap-3 flex-1 self-stretch rounded-2xl bg-white">
+                      <div className="flex px-3 sm:px-4 flex-col items-center self-stretch">
                         <img 
                           src="https://api.builder.io/api/v1/image/assets/TEMP/6eee8fb64b42d4d81fee7a7c350ea7e458b5ca2e?width=248" 
                           alt="Batch" 
-                          className="w-[124px] h-[124px] rounded-[72px]"
+                          className="w-[100px] h-[100px] sm:w-[124px] sm:h-[124px] rounded-[50px] sm:rounded-[72px]"
                         />
                       </div>
                       <div className="flex flex-col items-center self-stretch">
                         <div className="flex flex-col items-center self-stretch">
-                          <span className="self-stretch font-inter text-base font-normal leading-6 text-center text-[#121714]">{batch.name}</span>
+                          <span className="self-stretch font-inter text-sm sm:text-base font-normal leading-5 sm:leading-6 text-center text-[#121714]">{batch.name}</span>
                         </div>
                         <div className="flex flex-col items-center self-stretch">
-                          <span className="self-stretch font-inter text-sm font-normal leading-[21px] text-center text-[#638778]">
+                          <span className="self-stretch font-inter text-xs sm:text-sm font-normal leading-5 sm:leading-[21px] text-center text-[#638778]">
                             <span className="font-bold">Teacher:</span> {batch.teacher}
                           </span>
                         </div>
-                        <div className="flex flex-col items-center gap-3 self-stretch">
-                          <span className="self-stretch font-inter text-sm font-normal leading-[21px] text-center text-[#638778]">
+                        <div className="flex flex-col items-center gap-2 sm:gap-3 self-stretch">
+                          <span className="self-stretch font-inter text-xs sm:text-sm font-normal leading-5 sm:leading-[21px] text-center text-[#638778]">
                             <span className="font-bold">students:</span> {batch.students}
                           </span>
-                          <div className="flex w-[175px] h-14 px-4 justify-center items-end gap-[13px] border-t border-[rgba(0,0,0,0.06)]">
-                            <div className="flex w-[54px] flex-col justify-center items-center gap-2 shrink-0">
+                          <div className="flex w-full sm:w-[175px] h-12 sm:h-14 px-3 sm:px-4 justify-center items-end gap-2 sm:gap-[13px] border-t border-[rgba(0,0,0,0.06)]">
+                            <div className="flex w-[44px] sm:w-[54px] flex-col justify-center items-center gap-2 shrink-0">
                               <button 
                                 onClick={() => handleViewBatch(batch)}
-                                className="flex p-[10px] flex-col items-center rounded-[20px] bg-[#F0F5F2]"
+                                className="flex p-2 sm:p-[10px] flex-col items-center rounded-[20px] bg-[#F0F5F2] min-h-[44px] sm:min-h-0"
                               >
-                                <svg style={{ width: '20px', height: '20px', fill: '#121714' }} width="19" height="14" viewBox="0 0 19 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <svg style={{ width: '18px', height: '18px', fill: '#121714' }} className="sm:w-5 sm:h-5" width="19" height="14" viewBox="0 0 19 14" fill="none" xmlns="http://www.w3.org/2000/svg">
                                   <path fillRule="evenodd" clipRule="evenodd" d="M18.8211 6.74687C18.7938 6.68516 18.132 5.21719 16.6609 3.74609C14.7008 1.78594 12.225 0.75 9.5 0.75C6.775 0.75 4.29922 1.78594 2.33906 3.74609C0.867969 5.21719 0.203125 6.6875 0.178906 6.74687C0.107041 6.90852 0.107041 7.09304 0.178906 7.25469C0.20625 7.31641 0.867969 8.78359 2.33906 10.2547C4.29922 12.2141 6.775 13.25 9.5 13.25C12.225 13.25 14.7008 12.2141 16.6609 10.2547C18.132 8.78359 18.7938 7.31641 18.8211 7.25469C18.893 7.09304 18.893 6.90852 18.8211 6.74687V6.74687ZM9.5 12C7.09531 12 4.99453 11.1258 3.25547 9.40234C2.54191 8.69273 1.93483 7.88356 1.45312 7C1.9347 6.11636 2.54179 5.30717 3.25547 4.59766C4.99453 2.87422 7.09531 2 9.5 2C11.9047 2 14.0055 2.87422 15.7445 4.59766C16.4595 5.307 17.0679 6.11619 17.5508 7C16.9875 8.05156 14.5336 12 9.5 12V12ZM9.5 3.25C7.42893 3.25 5.75 4.92893 5.75 7C5.75 9.07107 7.42893 10.75 9.5 10.75C11.5711 10.75 13.25 9.07107 13.25 7C13.2478 4.92982 11.5702 3.25215 9.5 3.25V3.25ZM9.5 9.5C8.11929 9.5 7 8.38071 7 7C7 5.61929 8.11929 4.5 9.5 4.5C10.8807 4.5 12 5.61929 12 7C12 8.38071 10.8807 9.5 9.5 9.5V9.5Z" fill="#121714"/>
                                 </svg>
                               </button>
                             </div>
-                            <div className="flex w-[54px] flex-col justify-center items-center gap-2 shrink-0">
-                              <button className="flex p-[10px] flex-col items-center rounded-[20px] bg-[#F5F0F0]">
-                                <svg width="20" height="20" viewBox="0 0 21 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <div className="flex w-[44px] sm:w-[54px] flex-col justify-center items-center gap-2 shrink-0">
+                              <button className="flex p-2 sm:p-[10px] flex-col items-center rounded-[20px] bg-[#F5F0F0] min-h-[44px] sm:min-h-0">
+                                <svg width="18" height="18" className="sm:w-5 sm:h-5" viewBox="0 0 21 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                                   <mask id="mask0_2029_1115" style={{maskType: 'luminance'}} maskUnits="userSpaceOnUse" x="2" y="2" width="17" height="16">
                                     <path d="M2.5 2H18.5V18H2.5V2Z" fill="white"/>
                                   </mask>
@@ -338,9 +369,9 @@ const BatchManagement = () => {
                                 </svg>
                               </button>
                             </div>
-                            <div className="flex w-[54px] flex-col justify-center items-center gap-2 shrink-0">
-                              <button className="flex p-[10px] flex-col items-center rounded-[20px] bg-[#EAEEFF]">
-                                <svg style={{ width: '20px', height: '20px', fill: '#121714' }} width="16" height="17" viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <div className="flex w-[44px] sm:w-[54px] flex-col justify-center items-center gap-2 shrink-0">
+                              <button className="flex p-2 sm:p-[10px] flex-col items-center rounded-[20px] bg-[#EAEEFF] min-h-[44px] sm:min-h-0">
+                                <svg style={{ width: '18px', height: '18px', fill: '#121714' }} className="sm:w-5 sm:h-5" width="16" height="17" viewBox="0 0 16 17" fill="none" xmlns="http://www.w3.org/2000/svg">
                                   <path fillRule="evenodd" clipRule="evenodd" d="M15.2586 4.73203L11.768 1.24062C11.5335 1.00614 11.2156 0.874408 10.884 0.874408C10.5524 0.874408 10.2344 1.00614 10 1.24062L0.366406 10.875C0.130923 11.1086 -0.00105974 11.4269 0 11.7586V15.25C0 15.9404 0.559644 16.5 1.25 16.5H4.74141C5.07311 16.5011 5.39139 16.3691 5.625 16.1336L15.2586 6.5C15.4931 6.26557 15.6248 5.94759 15.6248 5.61602C15.6248 5.28445 15.4931 4.96646 15.2586 4.73203V4.73203ZM4.74141 15.25H1.25V11.7586L8.125 4.88359L11.6164 8.375L4.74141 15.25ZM12.5 7.49063L9.00859 4L10.8836 2.125L14.375 5.61562L12.5 7.49063Z" fill="#121714"/>
                                 </svg>
                               </button>

@@ -173,7 +173,7 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-[#F7FCFA]">
       {/* Header */}
-      <header className="flex justify-between items-center px-10 py-3 border-b border-[#E5E8EB]">
+      <header className="flex justify-between items-center px-4 sm:px-6 md:px-10 py-3 border-b border-[#E5E8EB]">
         <div className="flex items-center gap-8">
           <div className="flex items-center gap-4">
             <div className="flex flex-col items-center">
@@ -200,55 +200,55 @@ const Home = () => {
           </nav>
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <button style={{ display: 'none' }} className="px-4 py-3 bg-[#E5F5F0] text-[#0D1C17] font-bold text-sm rounded-xl font-[Lexend] min-w-[120px] h-[49px]">
             Fee Payments
           </button>
           <Link 
             to="/admin/signin"
-            className="px-4 py-3 bg-[#E5F5F0] text-[#0D1C17] font-bold text-sm rounded-xl font-[Lexend] min-w-[100px] h-[49px] flex items-center justify-center"
+            className="px-3 sm:px-4 py-2 sm:py-3 bg-[#E5F5F0] text-[#0D1C17] font-bold text-xs sm:text-sm rounded-xl font-[Lexend] min-w-[80px] sm:min-w-[100px] h-[44px] sm:h-[49px] flex items-center justify-center"
           >
             Admin
           </Link>
           <button
             onClick={handleSignUp}
             disabled={isSignUpLoading || isSignInLoading}
-            className="px-4 py-3 bg-[#F0F5F2] text-[#0D1C17] font-bold text-sm rounded-xl font-[Lexend] min-w-[100px] h-[49px] flex items-center justify-center hover:bg-[#E5F5F0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 sm:px-4 py-2 sm:py-3 bg-[#F0F5F2] text-[#0D1C17] font-bold text-xs sm:text-sm rounded-xl font-[Lexend] min-w-[80px] sm:min-w-[100px] h-[44px] sm:h-[49px] flex items-center justify-center hover:bg-[#E5F5F0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSignUpLoading ? 'Signing Up...' : 'Sign Up'}
           </button>
           <button
             onClick={handleSmartLogin}
             disabled={isSignUpLoading || isSignInLoading}
-            className="px-4 py-3 bg-[#009963] text-[#F7FCFA] font-bold text-sm rounded-xl font-[Lexend] min-w-[100px] h-[49px] flex items-center justify-center hover:bg-[#007a4d] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 sm:px-4 py-2 sm:py-3 bg-[#009963] text-[#F7FCFA] font-bold text-xs sm:text-sm rounded-xl font-[Lexend] min-w-[80px] sm:min-w-[100px] h-[44px] sm:h-[49px] flex items-center justify-center hover:bg-[#007a4d] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSignInLoading ? 'Signing In...' : 'Log In'}
           </button>
         </div>
       </header>
 
-      <main className="px-32 py-5">
+      <main className="px-4 sm:px-8 md:px-16 lg:px-32 py-4 sm:py-5">
         <div className="max-w-[960px] mx-auto">
           {/* Hero Section */}
           <section className="relative mb-12">
             <div 
-              className="h-[512px] rounded-xl flex items-center justify-center text-center text-white relative"
+              className="h-[300px] sm:h-[400px] md:h-[512px] rounded-xl flex items-center justify-center text-center text-white relative"
               style={{
                 background: `linear-gradient(90deg, rgba(0, 0, 0, 0.10) 0%, rgba(0, 0, 0, 0.40) 100%), url('https://api.builder.io/api/v1/image/assets/TEMP/bfea38818cfa85e9f7731bacb5edc374b80870b6?width=1856') lightgray 50% / cover no-repeat`
               }}
             >
-              <div className="flex flex-col items-center gap-8 max-w-[896px]">
+              <div className="flex flex-col items-center gap-4 sm:gap-6 md:gap-8 max-w-[896px] px-4">
                 <div className="flex flex-col gap-2">
-                  <h2 className="text-5xl font-black leading-[60px] tracking-[-2px] font-[Lexend]">
+                  <h2 className="text-3xl sm:text-4xl md:text-5xl font-black leading-tight sm:leading-[50px] md:leading-[60px] tracking-[-1px] sm:tracking-[-2px] font-[Lexend]">
                     Unlock Your Potential with<br />Unpuzzle Club
                   </h2>
-                  <p className="text-base font-normal leading-6 font-[Lexend]">
+                  <p className="text-sm sm:text-base font-normal leading-5 sm:leading-6 font-[Lexend]">
                     Learn from the best, teach what you know, and connect with a global community of learners and instructors.
                   </p>
                 </div>
                 
                 {/* Search Bar */}
-                <div className="w-[480px] h-16 flex rounded-xl overflow-hidden">
+                <div className="w-full sm:w-[400px] md:w-[480px] h-14 sm:h-16 flex rounded-xl overflow-hidden">
                   <div className="flex items-center pl-4 bg-[#F7FCFA] border border-[#CCE8DE]">
                     <svg width="20" height="20" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path fillRule="evenodd" clipRule="evenodd" d="M16.9422 16.0578L13.0305 12.1469C15.3858 9.3192 15.1004 5.13911 12.3826 2.65779C9.66485 0.176469 5.47612 0.271665 2.87389 2.87389C0.271665 5.47612 0.176469 9.66485 2.65779 12.3826C5.13911 15.1004 9.3192 15.3858 12.1469 13.0305L16.0578 16.9422C16.302 17.1864 16.698 17.1864 16.9422 16.9422C17.1864 16.698 17.1864 16.302 16.9422 16.0578ZM2.125 7.75C2.125 4.6434 4.6434 2.125 7.75 2.125C10.8566 2.125 13.375 4.6434 13.375 7.75C13.375 10.8566 10.8566 13.375 7.75 13.375C4.64483 13.3716 2.12844 10.8552 2.125 7.75Z" fill="#45A180"/>
@@ -262,7 +262,7 @@ const Home = () => {
                     className="flex-1 px-2 py-2 text-[#45A180] font-[Lexend] bg-[#F7FCFA] border-t border-b border-[#CCE8DE] outline-none"
                   />
                   <div className="flex items-center pr-2 bg-[#F7FCFA] border border-[#CCE8DE]">
-                    <button className="px-5 py-3 bg-[#009963] text-[#F7FCFA] font-bold rounded-xl font-[Lexend]">
+                    <button className="px-3 sm:px-5 py-2 sm:py-3 bg-[#009963] text-[#F7FCFA] font-bold text-xs sm:text-sm rounded-xl font-[Lexend] whitespace-nowrap">
                       Find Your Class
                     </button>
                   </div>
@@ -279,9 +279,9 @@ const Home = () => {
           </section>
 
           {/* Activities Section */}
-          <section className="mb-12">
-            <h3 className="text-[22px] font-bold text-[#0D1C17] mb-3 px-4 font-[Lexend]">Activities</h3>
-            <div className="flex flex-wrap gap-3 px-3">
+          <section className="mb-8 sm:mb-12">
+            <h3 className="text-lg sm:text-xl md:text-[22px] font-bold text-[#0D1C17] mb-3 px-2 sm:px-4 font-[Lexend]">Activities</h3>
+            <div className="flex flex-wrap gap-2 sm:gap-3 px-2 sm:px-3">
               {activities.map((activity, index) => (
                 <span
                   key={index}
@@ -294,18 +294,18 @@ const Home = () => {
           </section>
 
           {/* Course Cards */}
-          <section className="mb-12">
-            <div className="grid grid-cols-4 gap-3 px-4">
+          <section className="mb-8 sm:mb-12">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 px-2 sm:px-4">
               {courses.map((course) => (
-                <div key={course.id} className="flex flex-col gap-4">
+                <div key={course.id} className="flex flex-col gap-3 sm:gap-4">
                   <img 
                     src={course.image} 
                     alt={course.title}
-                    className="w-[240px] h-[135px] rounded-xl object-cover"
+                    className="w-full h-[180px] sm:h-[135px] rounded-xl object-cover"
                   />
                   <div>
-                    <h4 className="text-base font-medium text-[#0D1C17] font-[Lexend]">{course.title}</h4>
-                    <p className="text-sm text-[#45A180] font-[Lexend]">{course.description}</p>
+                    <h4 className="text-sm sm:text-base font-medium text-[#0D1C17] font-[Lexend]">{course.title}</h4>
+                    <p className="text-xs sm:text-sm text-[#45A180] font-[Lexend]">{course.description}</p>
                   </div>
                 </div>
               ))}
@@ -313,46 +313,46 @@ const Home = () => {
           </section>
 
           {/* Location Covered */}
-          <section className="mb-12">
-            <h3 className="text-[22px] font-bold text-[#0D1C17] mb-4 px-4 font-[Lexend]">Location Covered</h3>
-            <div className="px-4">
-              <div className="flex justify-between items-start rounded-xl">
-                <div className="w-[608px] flex flex-col gap-16">
+          <section className="mb-8 sm:mb-12">
+            <h3 className="text-lg sm:text-xl md:text-[22px] font-bold text-[#0D1C17] mb-4 px-2 sm:px-4 font-[Lexend]">Location Covered</h3>
+            <div className="px-2 sm:px-4">
+              <div className="flex flex-col md:flex-row justify-between items-start gap-4 md:gap-6 rounded-xl">
+                <div className="w-full md:w-[608px] flex flex-col gap-8 md:gap-16">
                   <div className="flex flex-col gap-1">
-                    <p className="text-sm text-[#888] font-[Lexend] leading-[21px]">
+                    <p className="text-xs sm:text-sm text-[#888] font-[Lexend] leading-5 sm:leading-[21px]">
                       Sarjapura road, Bangalore<br />
                       KR Puram, Whitefiled, Bangalore<br />
                       Ashok Nagar, Cyber Road, Banglore
                     </p>
                   </div>
-                  <button className="w-fit px-4 py-2 bg-[#E5F5F0] text-[#0D1C17] font-medium text-sm rounded-xl font-[Lexend]">
+                  <button className="w-fit px-4 py-2 bg-[#E5F5F0] text-[#0D1C17] font-medium text-xs sm:text-sm rounded-xl font-[Lexend]">
                     View All
                   </button>
                 </div>
                 <img 
                   src="https://api.builder.io/api/v1/image/assets/TEMP/c59d2130c583aaf00b8a773b07e8a9e8279ee4c8?width=640"
                   alt="Location map"
-                  className="h-[171px] flex-1 rounded-xl object-cover"
+                  className="w-full md:flex-1 h-[200px] md:h-[171px] rounded-xl object-cover"
                 />
               </div>
             </div>
           </section>
 
           {/* Student Success Stories */}
-          <section className="mb-12">
-            <h3 className="text-[22px] font-bold text-[#0D1C17] mb-4 px-4 font-[Lexend]">Student Success Stories</h3>
-            <div className="px-4">
-              <div className="grid grid-cols-3 gap-3">
+          <section className="mb-8 sm:mb-12">
+            <h3 className="text-lg sm:text-xl md:text-[22px] font-bold text-[#0D1C17] mb-4 px-2 sm:px-4 font-[Lexend]">Student Success Stories</h3>
+            <div className="px-2 sm:px-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {successStories.map((story) => (
-                  <div key={story.id} className="flex flex-col gap-4">
+                  <div key={story.id} className="flex flex-col gap-3 sm:gap-4">
                     <img 
                       src={story.image} 
                       alt={story.title}
-                      className="h-[301px] w-full rounded-xl object-cover"
+                      className="h-[250px] sm:h-[280px] md:h-[301px] w-full rounded-xl object-cover"
                     />
                     <div>
-                      <h4 className="text-base font-medium text-[#0D1C17] font-[Lexend]">{story.title}</h4>
-                      <p className="text-sm text-[#45A180] font-[Lexend]">{story.description}</p>
+                      <h4 className="text-sm sm:text-base font-medium text-[#0D1C17] font-[Lexend]">{story.title}</h4>
+                      <p className="text-xs sm:text-sm text-[#45A180] font-[Lexend]">{story.description}</p>
                     </div>
                   </div>
                 ))}
@@ -361,24 +361,24 @@ const Home = () => {
           </section>
 
           {/* Why Choose Us */}
-          <section className="py-16">
-            <h3 className="text-[36px] font-black text-[#0D1C17] text-center mb-8 tracking-[-1px] font-[Lexend]">
+          <section className="py-8 sm:py-12 md:py-16">
+            <h3 className="text-2xl sm:text-3xl md:text-[36px] font-black text-[#0D1C17] text-center mb-6 sm:mb-8 tracking-[-1px] font-[Lexend] px-4">
               Why Choose Us?
             </h3>
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               {features.map((feature, index) => (
                 <div 
                   key={index}
-                  className="w-[231px] h-[234px] p-6 flex flex-col items-center gap-6 rounded-xl border border-[#DBE5E0] bg-white"
+                  className="w-full sm:w-auto mx-auto sm:mx-0 sm:max-w-[231px] min-h-[200px] sm:h-[234px] p-4 sm:p-6 flex flex-col items-center gap-4 sm:gap-6 rounded-xl border border-[#DBE5E0] bg-white"
                 >
                   <div className="h-8 flex items-center justify-center">
                     {feature.icon}
                   </div>
                   <div className="flex flex-col gap-1 text-center">
-                    <h4 className="text-base font-bold text-[#121714] font-[Lexend] leading-5">
+                    <h4 className="text-sm sm:text-base font-bold text-[#121714] font-[Lexend] leading-5">
                       {feature.title}
                     </h4>
-                    <p className="text-[13px] text-[#618A73] font-[Lexend] leading-[21px]">
+                    <p className="text-xs sm:text-[13px] text-[#618A73] font-[Lexend] leading-5 sm:leading-[21px]">
                       {feature.description}
                     </p>
                   </div>
@@ -388,16 +388,16 @@ const Home = () => {
           </section>
 
           {/* CTA Section */}
-          <section className="py-11 px-10">
-            <div className="flex flex-col items-center gap-8">
-              <h3 className="text-[36px] font-black text-[#0D1C17] text-center tracking-[-1px] font-[Lexend]">
+          <section className="py-8 sm:py-11 px-4 sm:px-6 md:px-10">
+            <div className="flex flex-col items-center gap-6 sm:gap-8">
+              <h3 className="text-2xl sm:text-3xl md:text-[36px] font-black text-[#0D1C17] text-center tracking-[-1px] font-[Lexend]">
                 Ready to Get Started?
               </h3>
-              <div className="flex gap-3">
-                <button className="px-5 py-3 bg-[#009963] text-[#F7FCFA] font-bold rounded-xl font-[Lexend]">
+              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                <button className="w-full sm:w-auto px-5 py-3 bg-[#009963] text-[#F7FCFA] font-bold text-sm sm:text-base rounded-xl font-[Lexend] min-h-[44px]">
                   Book a free trail class
                 </button>
-                <button className="px-5 py-3 bg-[#F0F5F2] text-black font-bold rounded-xl font-[Lexend]">
+                <button className="w-full sm:w-auto px-5 py-3 bg-[#F0F5F2] text-black font-bold text-sm sm:text-base rounded-xl font-[Lexend] min-h-[44px]">
                   Become a Instructor
                 </button>
               </div>
@@ -408,36 +408,36 @@ const Home = () => {
 
       {/* Footer */}
       <footer className="max-w-[960px] mx-auto">
-        <div className="px-5 py-10 flex flex-col gap-6">
-          <div className="flex justify-between items-center flex-wrap gap-6">
-            <div className="w-40 min-w-[160px] text-center">
+        <div className="px-4 sm:px-5 py-8 sm:py-10 flex flex-col gap-6">
+          <div className="flex flex-col sm:flex-row justify-between items-center sm:items-start flex-wrap gap-4 sm:gap-6">
+            <div className="w-full sm:w-40 text-center">
               <button 
                 onClick={() => setShowAboutUs(true)}
-                className="text-base text-[#45A180] font-[Lexend] hover:text-[#009963] transition-colors cursor-pointer"
+                className="text-sm sm:text-base text-[#45A180] font-[Lexend] hover:text-[#009963] transition-colors cursor-pointer"
               >
                 About Us
               </button>
             </div>
-            <div className="w-40 min-w-[160px] text-center">
+            <div className="w-full sm:w-40 text-center">
               <button 
                 onClick={() => setShowContactUs(true)}
-                className="text-base text-[#45A180] font-[Lexend] hover:text-[#009963] transition-colors cursor-pointer"
+                className="text-sm sm:text-base text-[#45A180] font-[Lexend] hover:text-[#009963] transition-colors cursor-pointer"
               >
                 Contact Us
               </button>
             </div>
-            <div className="w-40 min-w-[160px] text-center">
+            <div className="w-full sm:w-40 text-center">
               <button 
                 onClick={() => setShowTermsOfService(true)}
-                className="text-base text-[#45A180] font-[Lexend] hover:text-[#009963] transition-colors cursor-pointer"
+                className="text-sm sm:text-base text-[#45A180] font-[Lexend] hover:text-[#009963] transition-colors cursor-pointer"
               >
                 Terms of Service
               </button>
             </div>
-            <div className="w-40 min-w-[160px] text-center">
+            <div className="w-full sm:w-40 text-center">
               <button 
                 onClick={() => setShowPrivacyPolicy(true)}
-                className="text-base text-[#45A180] font-[Lexend] hover:text-[#009963] transition-colors cursor-pointer"
+                className="text-sm sm:text-base text-[#45A180] font-[Lexend] hover:text-[#009963] transition-colors cursor-pointer"
               >
                 Privacy Policy
               </button>
@@ -460,7 +460,7 @@ const Home = () => {
           </div>
           
           <div className="text-center">
-            <p className="text-base text-[#45A180] font-[Lexend]">
+            <p className="text-xs sm:text-sm md:text-base text-[#45A180] font-[Lexend]">
               © 2024 Unpuzzle Club Connect. All rights reserved.
             </p>
           </div>

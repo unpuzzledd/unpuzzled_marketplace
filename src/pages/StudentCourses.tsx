@@ -87,18 +87,18 @@ const StudentCourses = () => {
   return (
     <div className="min-h-screen bg-[#F7FCFA] font-lexend">
       {/* Header */}
-      <header className="bg-white border-b border-[#E5E8EB] px-6 py-4">
+      <header className="bg-white border-b border-[#E5E8EB] px-4 sm:px-6 py-3 sm:py-4">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-4 mb-2">
+          <div className="flex items-center gap-2 sm:gap-4 mb-2">
             <button
               onClick={() => navigate('/student')}
-              className="p-2 hover:bg-[#F0F5F2] rounded-full transition-colors"
+              className="p-2 hover:bg-[#F0F5F2] rounded-full transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
             >
               <ArrowLeftIcon className="w-5 h-5 text-[#0F1717]" />
             </button>
             <div>
-              <h1 className="text-2xl font-bold text-[#0F1717]">My Courses</h1>
-              <p className="text-sm text-[#5E8C7D] mt-1">
+              <h1 className="text-xl sm:text-2xl font-bold text-[#0F1717]">My Courses</h1>
+              <p className="text-xs sm:text-sm text-[#5E8C7D] mt-1">
                 You're enrolled in {batches.length} {batches.length === 1 ? 'course' : 'courses'}
               </p>
             </div>
@@ -107,15 +107,15 @@ const StudentCourses = () => {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6 md:py-8">
         {/* Filter Section */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-[#0F1717]">Filter by:</span>
-            <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+            <span className="text-xs sm:text-sm font-medium text-[#0F1717]">Filter by:</span>
+            <div className="flex flex-wrap gap-2 overflow-x-auto sm:overflow-x-visible pb-2 sm:pb-0">
               <button
                 onClick={() => setFilterSkill('all')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap min-h-[44px] sm:min-h-0 ${
                   filterSkill === 'all'
                     ? 'bg-[#009963] text-white'
                     : 'bg-white text-[#5E8C7D] border border-[#DBE5E0] hover:bg-[#F0F5F2]'
@@ -127,7 +127,7 @@ const StudentCourses = () => {
                   <button
                   key={skill}
                   onClick={() => setFilterSkill(skill)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap min-h-[44px] sm:min-h-0 ${
                     filterSkill === skill
                       ? 'bg-[#009963] text-white'
                       : 'bg-white text-[#5E8C7D] border border-[#DBE5E0] hover:bg-[#F0F5F2]'
@@ -142,13 +142,13 @@ const StudentCourses = () => {
 
         {/* Courses Grid */}
         {filteredBatches.length === 0 ? (
-          <div className="bg-white rounded-xl border border-[#DBE5E0] p-12 text-center">
+          <div className="bg-white rounded-xl border border-[#DBE5E0] p-6 sm:p-8 md:p-12 text-center">
             <div className="flex flex-col items-center">
-              <svg className="w-16 h-16 text-[#5E8C7D] mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-12 h-12 sm:w-16 sm:h-16 text-[#5E8C7D] mb-3 sm:mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
               </svg>
-              <h3 className="text-lg font-bold text-[#0F1717] mb-2">No Courses Found</h3>
-              <p className="text-sm text-[#5E8C7D]">
+              <h3 className="text-base sm:text-lg font-bold text-[#0F1717] mb-2">No Courses Found</h3>
+              <p className="text-xs sm:text-sm text-[#5E8C7D]">
                 {batches.length === 0 
                   ? "You haven't enrolled in any courses yet." 
                   : "No courses match the selected filter."}
@@ -156,7 +156,7 @@ const StudentCourses = () => {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {filteredBatches.map((batch) => (
               <div
                 key={batch.id}
@@ -164,15 +164,15 @@ const StudentCourses = () => {
                 className="bg-white rounded-xl border border-[#DBE5E0] overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
               >
                 {/* Course Header with Skill Icon */}
-                <div className="bg-gradient-to-br from-[#009963] to-[#007a4f] p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <div className="bg-gradient-to-br from-[#009963] to-[#007a4f] p-4 sm:p-6">
+                  <div className="flex items-center justify-between mb-3 sm:mb-4">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                      <svg width="20" height="20" className="sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M12 14L21 9L12 4L3 9L12 14Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         <path d="M12 14L21 9V16L12 21L3 16V9L12 14Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                     </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${
                       batch.status === 'active' 
                         ? 'bg-green-400/20 text-white' 
                         : 'bg-gray-400/20 text-white'
@@ -180,16 +180,16 @@ const StudentCourses = () => {
                       {batch.status}
                     </span>
                   </div>
-                  <h3 className="text-lg font-bold text-white mb-1">
+                  <h3 className="text-base sm:text-lg font-bold text-white mb-1">
                     {batch.name}
                   </h3>
-                  <p className="text-sm text-white/80">
+                  <p className="text-xs sm:text-sm text-white/80">
                     {batch.skill?.name}
                   </p>
                 </div>
 
                 {/* Course Details */}
-                <div className="p-6">
+                <div className="p-4 sm:p-6">
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 text-sm text-[#5E8C7D]">
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -216,8 +216,8 @@ const StudentCourses = () => {
                     )}
                   </div>
 
-                  <div className="mt-6 pt-4 border-t border-[#E5E8EB]">
-                    <button className="w-full px-4 py-2 bg-[#009963] text-white rounded-lg hover:bg-[#007a4f] transition-colors text-sm font-medium">
+                  <div className="mt-4 sm:mt-6 pt-4 border-t border-[#E5E8EB]">
+                    <button className="w-full px-4 py-2.5 sm:py-2 bg-[#009963] text-white rounded-lg hover:bg-[#007a4f] transition-colors text-sm font-medium min-h-[44px] sm:min-h-0">
                       View Course Details
                     </button>
                     </div>

@@ -20,6 +20,7 @@ const TeacherLanding = () => {
   const [selectedBatch, setSelectedBatch] = useState<any>(null)
   const [loggingOut, setLoggingOut] = useState(false)
   const [assignments, setAssignments] = useState<any[]>([])
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   // Role-based access control
   useEffect(() => {
@@ -142,8 +143,18 @@ const TeacherLanding = () => {
   return (
     <div className="flex flex-col min-h-screen bg-[#F7FCFA]">
       {/* Header */}
-      <header className="flex px-10 py-3 justify-between items-center border-b border-[#E5E8EB]">
-        <div className="flex items-center gap-4">
+      <header className="flex px-4 sm:px-6 md:px-10 py-3 justify-between items-center border-b border-[#E5E8EB]">
+        <div className="flex items-center gap-2 sm:gap-4">
+          {/* Hamburger Menu Button - Mobile Only */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden p-2 -ml-2"
+            aria-label="Toggle menu"
+          >
+            <svg className="w-6 h-6 text-[#0F1717]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
           <div className="flex flex-col items-start">
             <div className="w-4 flex-1 relative">
               <svg style={{ width: '16px', height: '16px', fill: '#0F1717' }} width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -151,14 +162,14 @@ const TeacherLanding = () => {
               </svg>
             </div>
           </div>
-          <h1 className="font-lexend text-lg font-bold leading-[23px] text-[#0F1717]">Unpuzzle Club</h1>
+          <h1 className="font-lexend text-base sm:text-lg font-bold leading-[23px] text-[#0F1717]">Unpuzzle Club</h1>
         </div>
         
-        <div className="flex justify-end items-start gap-8 flex-1">
-          <div className="flex h-10 items-center gap-9">
+        <div className="flex justify-end items-start gap-2 sm:gap-4 md:gap-8 flex-1">
+          <div className="hidden md:flex h-10 items-center gap-6 lg:gap-9">
             <span className="font-lexend text-sm font-normal leading-[21px] text-[#0F1717] cursor-pointer hover:text-[#009963]">Home</span>
           </div>
-          <div className="flex h-10 max-w-[480px] px-[10px] justify-center items-center gap-2 rounded-[20px] bg-[#F0F5F2] cursor-pointer hover:bg-[#E0E8E5]">
+          <div className="hidden md:flex h-10 max-w-[480px] px-[10px] justify-center items-center gap-2 rounded-[20px] bg-[#F0F5F2] cursor-pointer hover:bg-[#E0E8E5]">
             <div className="flex flex-col items-center flex-1">
               <div className="flex-1 self-stretch">
                 <svg style={{ width: '20px', height: '20px', fill: '#0F1717' }} width="16" height="18" viewBox="0 0 16 18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -167,20 +178,20 @@ const TeacherLanding = () => {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#5E8C7D] rounded-[20px] flex items-center justify-center">
-              <span className="text-white font-bold text-lg">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#5E8C7D] rounded-[20px] flex items-center justify-center">
+              <span className="text-white font-bold text-sm sm:text-lg">
                 {user?.full_name?.charAt(0).toUpperCase() || 'T'}
               </span>
             </div>
-            <div className="text-right">
+            <div className="hidden md:block text-right">
               <p className="text-sm font-medium text-[#0F1717]">{user?.full_name || 'Teacher'}</p>
               <p className="text-xs text-[#5E8C7D]">Teacher</p>
             </div>
             <button
               onClick={handleSignOut}
               disabled={loggingOut}
-              className="px-4 py-2 bg-[#F0F5F2] text-[#0D1C17] font-medium text-sm rounded-lg hover:bg-[#E5F5F0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-3 sm:px-4 py-1.5 sm:py-2 bg-[#F0F5F2] text-[#0D1C17] font-medium text-xs sm:text-sm rounded-lg hover:bg-[#E5F5F0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 min-h-[44px]"
             >
               {loggingOut && (
                 <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -188,19 +199,40 @@ const TeacherLanding = () => {
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
               )}
-              {loggingOut ? 'Logging out...' : 'Logout'}
+              <span className="hidden sm:inline">{loggingOut ? 'Logging out...' : 'Logout'}</span>
+              <span className="sm:hidden">{loggingOut ? '...' : 'Out'}</span>
             </button>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <div className="flex min-h-[800px] flex-col items-start flex-shrink-0 self-stretch bg-[#F7FCFA]">
+      <div className="flex min-h-[800px] flex-col items-start flex-shrink-0 self-stretch bg-[#F7FCFA] relative">
+        {/* Mobile Menu Overlay */}
+        {isMobileMenuOpen && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+        )}
+
         <div className="flex flex-col items-start self-stretch">
-          <div className="flex p-6 justify-center items-start gap-4 flex-1 self-stretch">
+          <div className="flex p-3 sm:p-4 md:p-6 justify-center items-start gap-2 sm:gap-4 flex-1 self-stretch">
             {/* Sidebar */}
-            <div className="flex flex-col justify-center items-start gap-[10px]">
-              <div className="flex w-[269px] min-h-[700px] h-[760px] p-4 flex-col justify-between items-start rounded-2xl bg-white">
+            <div className={`fixed md:static inset-y-0 left-0 z-50 md:z-auto flex flex-col justify-center items-start gap-[10px] transform transition-transform duration-300 ease-in-out md:translate-x-0 ${
+              isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+            }`}>
+              <div className="flex w-[269px] min-h-[700px] h-[760px] p-4 flex-col justify-between items-start rounded-2xl bg-white relative">
+                {/* Close button for mobile */}
+                <button
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="md:hidden absolute top-4 right-4 p-2"
+                  aria-label="Close menu"
+                >
+                  <svg className="w-6 h-6 text-[#0F1717]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
                 <div className="flex flex-col items-start gap-4 self-stretch">
                   {/* User Profile */}
                   <div className="flex items-start gap-3 self-stretch">
@@ -305,20 +337,20 @@ const TeacherLanding = () => {
             </div>
 
             {/* Main Content Area */}
-            <div className="flex max-w-[960px] flex-col items-start gap-4 flex-1">
+            <div className="flex max-w-[960px] flex-col items-start gap-3 sm:gap-4 flex-1 w-full">
               {activeView === 'home' && (
-                <div className="flex flex-col items-start gap-6 self-stretch">
+                <div className="flex flex-col items-start gap-4 sm:gap-6 self-stretch">
                   <div className="flex flex-col items-start self-stretch">
-                    <div className="flex p-4 justify-between items-start content-start gap-3 self-stretch flex-wrap">
+                    <div className="flex flex-col sm:flex-row p-3 sm:p-4 justify-between items-start content-start gap-4 sm:gap-3 self-stretch">
                       {/* Welcome Section */}
-                      <div className="flex min-w-[288px] flex-col items-start gap-3">
+                      <div className="flex w-full sm:min-w-[288px] flex-col items-start gap-2 sm:gap-3">
                         <div className="flex flex-col items-start">
-                          <h2 className="font-lexend text-[32px] font-bold leading-10 text-[#0F1717]">
+                          <h2 className="font-lexend text-2xl sm:text-3xl md:text-[32px] font-bold leading-tight sm:leading-10 text-[#0F1717]">
                             Welcome back, {user?.full_name?.split(' ')[0] || 'Teacher'}!
                           </h2>
                         </div>
-                        <div className="flex w-[379px] flex-col items-start">
-                          <p className="font-lexend text-sm font-normal leading-[21px] text-[#5E8C7D]">
+                        <div className="flex w-full sm:w-[379px] flex-col items-start">
+                          <p className="font-lexend text-xs sm:text-sm font-normal leading-5 sm:leading-[21px] text-[#5E8C7D]">
                             {statistics ? (
                               <>You've completed {statistics.completedTopics} topics and have {statistics.upcomingTopics} upcoming.</>
                             ) : (
@@ -329,13 +361,13 @@ const TeacherLanding = () => {
                       </div>
 
                       {/* Your Course Dropdown */}
-                      <div className="flex h-[68px] flex-col items-end gap-1">
-                        <span className="font-lexend text-base font-bold leading-[30.916px] tracking-[0.403px] text-[#121212]">Your Course</span>
-                        <div className="relative">
+                      <div className="flex w-full sm:w-auto sm:h-[68px] flex-col sm:items-end gap-1">
+                        <span className="font-lexend text-sm sm:text-base font-bold leading-6 sm:leading-[30.916px] tracking-[0.403px] text-[#121212]">Your Course</span>
+                        <div className="relative w-full sm:w-auto">
                           <select
                             value={selectedSkill}
                             onChange={(e) => setSelectedSkill(e.target.value)}
-                            className="flex h-8 min-w-[84px] max-w-[480px] px-4 pr-8 justify-center items-center flex-shrink-0 rounded-lg bg-[#009963] text-white font-lexend text-sm font-normal leading-[21px] appearance-none cursor-pointer"
+                            className="flex h-10 sm:h-8 w-full sm:min-w-[84px] sm:max-w-[480px] px-4 pr-8 justify-center items-center flex-shrink-0 rounded-lg bg-[#009963] text-white font-lexend text-sm font-normal leading-[21px] appearance-none cursor-pointer"
                           >
                             <option value="all">All Courses</option>
                             {skills.map(skill => (
@@ -357,11 +389,11 @@ const TeacherLanding = () => {
                     </div>
 
                     {/* Today's Classes Card */}
-                    <div className="flex justify-center items-start gap-4 self-stretch">
-                      <div className="flex min-h-[283px] p-4 justify-center items-start gap-4 flex-1 rounded-xl border border-[#DBE5E0] bg-white">
-                        <div className="flex flex-col items-start gap-4 flex-1">
+                    <div className="flex justify-center items-start gap-3 sm:gap-4 self-stretch">
+                      <div className="flex min-h-[283px] p-3 sm:p-4 justify-center items-start gap-3 sm:gap-4 flex-1 rounded-xl border border-[#DBE5E0] bg-white">
+                        <div className="flex flex-col items-start gap-3 sm:gap-4 flex-1">
                           <div className="flex items-center gap-3 self-stretch">
-                            <h3 className="font-lexend text-[20px] font-bold leading-[30.916px] tracking-[0.403px] text-[#121212]">
+                            <h3 className="font-lexend text-lg sm:text-[20px] font-bold leading-7 sm:leading-[30.916px] tracking-[0.403px] text-[#121212]">
                               Your Batches
                             </h3>
                           </div>
@@ -441,13 +473,13 @@ const TeacherLanding = () => {
                     </div>
 
                     {/* Check Student's Attendance */}
-                    <div className="flex min-w-[288px] p-4 flex-col justify-center items-start gap-4 self-stretch rounded-xl border border-[#DBE5E0] bg-white mt-4">
-                      <div className="flex h-8 justify-between items-center self-stretch">
-                        <div className="flex justify-between items-center flex-1">
-                          <h3 className="font-lexend text-lg font-bold leading-[23px] text-[#0F1717]">Manage Classes</h3>
+                    <div className="flex w-full sm:min-w-[288px] p-3 sm:p-4 flex-col justify-center items-start gap-3 sm:gap-4 self-stretch rounded-xl border border-[#DBE5E0] bg-white mt-3 sm:mt-4">
+                      <div className="flex flex-col sm:flex-row sm:h-8 justify-between items-start sm:items-center gap-3 sm:gap-0 self-stretch">
+                        <div className="flex justify-between items-center flex-1 w-full sm:w-auto">
+                          <h3 className="font-lexend text-base sm:text-lg font-bold leading-6 sm:leading-[23px] text-[#0F1717]">Manage Classes</h3>
                           <button 
                             onClick={() => setActiveView('batches')}
-                            className="flex h-8 min-w-[84px] max-w-[480px] px-4 justify-center items-center rounded-lg bg-[#009963] hover:bg-[#007a4f] transition-colors"
+                            className="flex h-10 sm:h-8 w-full sm:w-auto sm:min-w-[84px] sm:max-w-[480px] px-4 justify-center items-center rounded-lg bg-[#009963] hover:bg-[#007a4f] transition-colors min-h-[44px] sm:min-h-0"
                           >
                             <div className="flex justify-center items-start gap-1">
                               <span className="font-lexend text-sm font-normal leading-[21px] text-white overflow-hidden text-ellipsis line-clamp-1">View All Batches</span>
@@ -461,9 +493,9 @@ const TeacherLanding = () => {
               )}
 
               {activeView === 'batches' && (
-                <div className="flex flex-col items-start gap-4 self-stretch p-4">
-                  <h2 className="text-[32px] font-bold text-[#0F1717]">All Batches</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                <div className="flex flex-col items-start gap-3 sm:gap-4 self-stretch p-3 sm:p-4">
+                  <h2 className="text-2xl sm:text-3xl md:text-[32px] font-bold text-[#0F1717]">All Batches</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 w-full">
                     {batches.map(batch => (
                       <div 
                         key={batch.id}
@@ -490,10 +522,10 @@ const TeacherLanding = () => {
               )}
 
               {activeView === 'students' && (
-                <div className="flex flex-col items-start gap-4 self-stretch p-4">
-                  <h2 className="text-[32px] font-bold text-[#0F1717]">Students</h2>
-                  <div className="bg-white border border-[#DBE5E0] rounded-xl p-4 w-full">
-                    <p className="text-[#5E8C7D]">
+                <div className="flex flex-col items-start gap-3 sm:gap-4 self-stretch p-3 sm:p-4">
+                  <h2 className="text-2xl sm:text-3xl md:text-[32px] font-bold text-[#0F1717]">Students</h2>
+                  <div className="bg-white border border-[#DBE5E0] rounded-xl p-3 sm:p-4 w-full">
+                    <p className="text-sm sm:text-base text-[#5E8C7D]">
                       Select a batch to view students or use the batches view.
                     </p>
                   </div>
@@ -501,10 +533,10 @@ const TeacherLanding = () => {
               )}
 
               {activeView === 'attendance' && (
-                <div className="flex flex-col items-start gap-4 self-stretch p-4">
-                  <h2 className="text-[32px] font-bold text-[#0F1717]">Attendance</h2>
-                  <div className="bg-white border border-[#DBE5E0] rounded-xl p-4 w-full">
-                    <p className="text-[#5E8C7D]">
+                <div className="flex flex-col items-start gap-3 sm:gap-4 self-stretch p-3 sm:p-4">
+                  <h2 className="text-2xl sm:text-3xl md:text-[32px] font-bold text-[#0F1717]">Attendance</h2>
+                  <div className="bg-white border border-[#DBE5E0] rounded-xl p-3 sm:p-4 w-full">
+                    <p className="text-sm sm:text-base text-[#5E8C7D]">
                       Attendance tracking coming soon...
                     </p>
                   </div>

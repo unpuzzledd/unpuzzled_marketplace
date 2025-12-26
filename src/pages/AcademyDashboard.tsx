@@ -45,6 +45,7 @@ const AcademyDashboard = () => {
   const [showBatchModal, setShowBatchModal] = useState(false)
   const [selectedBatch, setSelectedBatch] = useState<any>(null)
   const [loggingOut, setLoggingOut] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   
   const { user, loading, signOut } = useAuth()
   const navigate = useNavigate()
@@ -300,8 +301,8 @@ const AcademyDashboard = () => {
       <div className="min-h-screen bg-[#F7FCFA] font-[Lexend]">
         {/* Header */}
         <header className="bg-white border-b border-[#E5E8EB]">
-          <div className="flex justify-between items-center px-10 py-3">
-            <div className="flex items-center gap-4">
+          <div className="flex justify-between items-center px-4 sm:px-6 md:px-10 py-3">
+            <div className="flex items-center gap-2 sm:gap-4">
               <div className="flex flex-col items-start">
                 <div className="w-4 h-4 relative">
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -309,19 +310,19 @@ const AcademyDashboard = () => {
                   </svg>
                 </div>
               </div>
-              <h1 className="text-lg font-bold text-[#0F1717] leading-[23px]">Unpuzzle Club</h1>
+              <h1 className="text-base sm:text-lg font-bold text-[#0F1717] leading-[23px]">Unpuzzle Club</h1>
             </div>
             
-            <div className="flex justify-end items-center gap-4 flex-1">
-              <div className="flex items-center gap-3">
-                <div className="text-right">
+            <div className="flex justify-end items-center gap-2 sm:gap-4 flex-1">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="hidden sm:block text-right">
                   <p className="text-sm font-medium text-[#0F1717]">{user?.full_name || 'Academy Owner'}</p>
                   <p className="text-xs text-[#5E8C7D]">Academy Owner</p>
                 </div>
                 <button
                   onClick={handleLogout}
                   disabled={loggingOut}
-                  className="px-3 py-1 bg-[#F0F5F2] text-[#0D1C17] font-medium text-xs rounded-lg hover:bg-[#E5F5F0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-3 py-1.5 sm:py-1 bg-[#F0F5F2] text-[#0D1C17] font-medium text-xs rounded-lg hover:bg-[#E5F5F0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 min-h-[44px] sm:min-h-0"
                 >
                   {loggingOut && (
                     <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -329,14 +330,15 @@ const AcademyDashboard = () => {
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                   )}
-                  {loggingOut ? 'Logging out...' : 'Logout'}
+                  <span className="hidden sm:inline">{loggingOut ? 'Logging out...' : 'Logout'}</span>
+                  <span className="sm:hidden">{loggingOut ? '...' : 'Out'}</span>
                 </button>
               </div>
             </div>
           </div>
         </header>
 
-        <div className="py-8 px-4">
+        <div className="py-4 sm:py-6 md:py-8 px-3 sm:px-4">
           <AcademySetupForm
             onSuccess={() => {
               // Set loading state immediately to show loading screen
@@ -361,65 +363,96 @@ const AcademyDashboard = () => {
 
   return (
     <div className="min-h-screen bg-[#F7FCFA] font-[Lexend]">
-      {/* Header */}
-      <header className="bg-white border-b border-[#E5E8EB]">
-        <div className="flex justify-between items-center px-10 py-3">
-          <div className="flex items-center gap-4">
-            <div className="flex flex-col items-start">
-              <div className="w-4 h-4 relative">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path fillRule="evenodd" clipRule="evenodd" d="M0.333333 0.333333H4.7778V4.7778H9.2222V9.2222H13.6667V13.6667H0.333333V0.333333V0.333333Z" fill="#0F1717"/>
+        {/* Header */}
+        <header className="bg-white border-b border-[#E5E8EB]">
+          <div className="flex justify-between items-center px-4 sm:px-6 md:px-10 py-3">
+            <div className="flex items-center gap-2 sm:gap-4">
+              {/* Hamburger Menu Button - Mobile Only */}
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="md:hidden p-2 -ml-2"
+                aria-label="Toggle menu"
+              >
+                <svg className="w-6 h-6 text-[#0F1717]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+              <div className="flex flex-col items-start">
+                <div className="w-4 h-4 relative">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M0.333333 0.333333H4.7778V4.7778H9.2222V9.2222H13.6667V13.6667H0.333333V0.333333V0.333333Z" fill="#0F1717"/>
+                  </svg>
+                </div>
+              </div>
+              <h1 className="text-base sm:text-lg font-bold text-[#0F1717] leading-[23px]">{academyData?.name || 'Academy'}</h1>
+            </div>
+            
+            <div className="flex justify-end items-center gap-2 sm:gap-4 flex-1">
+              <div className="hidden md:flex items-center gap-6 lg:gap-9">
+                <span className="text-sm text-[#0F1717] leading-[21px]">Home</span>
+              </div>
+              
+              <div className="hidden md:flex items-center gap-2 px-2.5 py-0 bg-[#F0F5F2] rounded-[20px] max-w-[480px]">
+                <svg width="16" height="18" viewBox="0 0 16 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M15.3281 12.7453C14.8945 11.9984 14.25 9.88516 14.25 7.125C14.25 3.67322 11.4518 0.875 8 0.875C4.54822 0.875 1.75 3.67322 1.75 7.125C1.75 9.88594 1.10469 11.9984 0.671094 12.7453C0.445722 13.1318 0.444082 13.6092 0.666796 13.9973C0.889509 14.3853 1.30261 14.6247 1.75 14.625H4.93828C5.23556 16.0796 6.51529 17.1243 8 17.1243C9.48471 17.1243 10.7644 16.0796 11.0617 14.625H14.25C14.6972 14.6244 15.1101 14.3849 15.3326 13.9969C15.5551 13.609 15.5534 13.1317 15.3281 12.7453V12.7453ZM8 15.875C7.20562 15.8748 6.49761 15.3739 6.23281 14.625H9.76719C9.50239 15.3739 8.79438 15.8748 8 15.875V15.875ZM1.75 13.375C2.35156 12.3406 3 9.94375 3 7.125C3 4.36358 5.23858 2.125 8 2.125C10.7614 2.125 13 4.36358 13 7.125C13 9.94141 13.6469 12.3383 14.25 13.375H1.75Z" fill="#0F1717"/>
                 </svg>
               </div>
-            </div>
-            <h1 className="text-lg font-bold text-[#0F1717] leading-[23px]">{academyData?.name || 'Academy'}</h1>
-          </div>
-          
-          <div className="flex justify-end items-center gap-4 flex-1">
-            <div className="flex items-center gap-9">
-              <span className="text-sm text-[#0F1717] leading-[21px]">Home</span>
-            </div>
-            
-            <div className="flex items-center gap-2 px-2.5 py-0 bg-[#F0F5F2] rounded-[20px] max-w-[480px]">
-              <svg width="16" height="18" viewBox="0 0 16 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path fillRule="evenodd" clipRule="evenodd" d="M15.3281 12.7453C14.8945 11.9984 14.25 9.88516 14.25 7.125C14.25 3.67322 11.4518 0.875 8 0.875C4.54822 0.875 1.75 3.67322 1.75 7.125C1.75 9.88594 1.10469 11.9984 0.671094 12.7453C0.445722 13.1318 0.444082 13.6092 0.666796 13.9973C0.889509 14.3853 1.30261 14.6247 1.75 14.625H4.93828C5.23556 16.0796 6.51529 17.1243 8 17.1243C9.48471 17.1243 10.7644 16.0796 11.0617 14.625H14.25C14.6972 14.6244 15.1101 14.3849 15.3326 13.9969C15.5551 13.609 15.5534 13.1317 15.3281 12.7453V12.7453ZM8 15.875C7.20562 15.8748 6.49761 15.3739 6.23281 14.625H9.76719C9.50239 15.3739 8.79438 15.8748 8 15.875V15.875ZM1.75 13.375C2.35156 12.3406 3 9.94375 3 7.125C3 4.36358 5.23858 2.125 8 2.125C10.7614 2.125 13 4.36358 13 7.125C13 9.94141 13.6469 12.3383 14.25 13.375H1.75Z" fill="#0F1717"/>
-              </svg>
-            </div>
-            
-            {/* User Profile Section */}
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <p className="text-sm font-medium text-[#0F1717]">{user?.full_name || 'Academy Owner'}</p>
-                <p className="text-xs text-[#5E8C7D]">Academy Owner</p>
+              
+              {/* User Profile Section */}
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="hidden md:block text-right">
+                  <p className="text-sm font-medium text-[#0F1717]">{user?.full_name || 'Academy Owner'}</p>
+                  <p className="text-xs text-[#5E8C7D]">Academy Owner</p>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  disabled={loggingOut}
+                  className="px-3 sm:px-3 py-1.5 sm:py-1 bg-[#F0F5F2] text-[#0D1C17] font-medium text-xs rounded-lg hover:bg-[#E5F5F0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 min-h-[44px] sm:min-h-0"
+                >
+                  {loggingOut && (
+                    <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  )}
+                  <span className="hidden sm:inline">{loggingOut ? 'Logging out...' : 'Logout'}</span>
+                  <span className="sm:hidden">{loggingOut ? '...' : 'Out'}</span>
+                </button>
               </div>
-              <button
-                onClick={handleLogout}
-                disabled={loggingOut}
-                className="px-3 py-1 bg-[#F0F5F2] text-[#0D1C17] font-medium text-xs rounded-lg hover:bg-[#E5F5F0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {loggingOut && (
-                  <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                )}
-                {loggingOut ? 'Logging out...' : 'Logout'}
-              </button>
+              
+              <img 
+                src="https://api.builder.io/api/v1/image/assets/TEMP/ec3fd35c54906d1a891fbea1c5010977b18a8366?width=80" 
+                alt="Profile" 
+                className="hidden sm:block w-8 h-8 md:w-10 md:h-10 rounded-[20px]"
+              />
             </div>
-            
-            <img 
-              src="https://api.builder.io/api/v1/image/assets/TEMP/ec3fd35c54906d1a891fbea1c5010977b18a8366?width=80" 
-              alt="Profile" 
-              className="w-10 h-10 rounded-[20px]"
-            />
           </div>
-        </div>
-      </header>
+        </header>
 
-      <div className="flex min-h-[800px]">
+      <div className="flex min-h-[800px] relative">
+        {/* Mobile Menu Overlay */}
+        {isMobileMenuOpen && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+        )}
+
         {/* Sidebar */}
-        <div className="w-80 p-6 flex flex-col justify-center items-start gap-1">
-          <div className="bg-white p-4 rounded-none min-h-[700px] flex flex-col justify-between items-start self-stretch">
+        <div className={`fixed md:static inset-y-0 left-0 z-50 md:z-auto w-80 p-0 md:p-6 flex flex-col justify-center items-start gap-1 transform transition-transform duration-300 ease-in-out md:translate-x-0 ${
+          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        }`}>
+          <div className="bg-white p-4 rounded-none min-h-[700px] flex flex-col justify-between items-start self-stretch relative">
+            {/* Close button for mobile */}
+            <button
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="md:hidden absolute top-4 right-4 p-2"
+              aria-label="Close menu"
+            >
+              <svg className="w-6 h-6 text-[#0F1717]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
             <div className="flex flex-col items-start gap-4 self-stretch">
               <div className="flex items-start gap-3 self-stretch">
                 <img 
@@ -592,11 +625,11 @@ const AcademyDashboard = () => {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 max-w-[960px] flex flex-col items-start">
+        <div className="flex-1 max-w-[960px] flex flex-col items-start w-full">
           {/* Header */}
-          <div className="flex justify-between items-start content-start gap-3 self-stretch flex-wrap p-4">
-            <div className="flex min-w-[288px] flex-col items-start gap-3">
-              <h1 className="text-[32px] font-bold text-[#0F1717] leading-10 self-stretch">
+          <div className="flex justify-between items-start content-start gap-3 self-stretch flex-wrap p-3 sm:p-4">
+            <div className="flex w-full sm:min-w-[288px] flex-col items-start gap-2 sm:gap-3">
+              <h1 className="text-2xl sm:text-3xl md:text-[32px] font-bold text-[#0F1717] leading-tight sm:leading-10 self-stretch">
                 {activeTab === 'overview' && 'Academy Dashboard'}
                 {activeTab === 'teachers' && 'Teachers Management'}
                 {activeTab === 'students' && 'Students Management'}
@@ -604,8 +637,8 @@ const AcademyDashboard = () => {
                 {activeTab === 'analytics' && 'Analytics & Performance'}
                 {activeTab === 'profile' && 'Academy Profile Management'}
               </h1>
-              <div className="w-[340px] flex flex-col items-start">
-                <p className="text-sm text-[#5E8C7D] leading-[21px] self-stretch">Welcome back, {user?.full_name || 'Academy Owner'}</p>
+              <div className="w-full sm:w-[340px] flex flex-col items-start">
+                <p className="text-xs sm:text-sm text-[#5E8C7D] leading-5 sm:leading-[21px] self-stretch">Welcome back, {user?.full_name || 'Academy Owner'}</p>
               </div>
             </div>
           </div>
@@ -613,27 +646,27 @@ const AcademyDashboard = () => {
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <>
-          <div className="flex h-[60px] px-4 py-3 flex-col items-start self-stretch">
-            <h2 className="text-[22px] font-bold text-[#0F1717] leading-7 self-stretch">Today's Academy Snapshot</h2>
+          <div className="flex h-auto sm:h-[60px] px-3 sm:px-4 py-2 sm:py-3 flex-col items-start self-stretch">
+            <h2 className="text-lg sm:text-xl md:text-[22px] font-bold text-[#0F1717] leading-6 sm:leading-7 self-stretch">Today's Academy Snapshot</h2>
           </div>
 
           {/* Stats Cards */}
-          <div className="flex items-start gap-4 self-stretch p-4">
-            <div className="flex min-w-[158px] flex-1 flex-col items-center gap-4 bg-white border border-[#DBE5E0] rounded-xl p-6">
-              <span className="text-xs text-[#5E8C7D] leading-[14.4px] self-stretch">Total Students</span>
-                  <span className="text-2xl font-bold text-[#0F1717] leading-[30px] self-stretch">{statistics?.totalStudents || 0}</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 items-start gap-3 sm:gap-4 self-stretch p-3 sm:p-4">
+            <div className="flex min-w-0 flex-1 flex-col items-center gap-3 sm:gap-4 bg-white border border-[#DBE5E0] rounded-xl p-4 sm:p-6">
+              <span className="text-xs text-[#5E8C7D] leading-[14.4px] self-stretch text-center">Total Students</span>
+                  <span className="text-xl sm:text-2xl font-bold text-[#0F1717] leading-7 sm:leading-[30px] self-stretch text-center">{statistics?.totalStudents || 0}</span>
             </div>
-            <div className="flex min-w-[158px] flex-1 flex-col items-center gap-4 bg-white border border-[#DBE5E0] rounded-xl p-6">
-              <span className="text-xs text-[#5E8C7D] leading-[14.4px] self-stretch">New/Pending Students</span>
-                  <span className="text-2xl font-bold text-[#0F1717] leading-[30px] self-stretch">{statistics?.pendingStudents || 0}</span>
+            <div className="flex min-w-0 flex-1 flex-col items-center gap-3 sm:gap-4 bg-white border border-[#DBE5E0] rounded-xl p-4 sm:p-6">
+              <span className="text-xs text-[#5E8C7D] leading-[14.4px] self-stretch text-center">New/Pending Students</span>
+                  <span className="text-xl sm:text-2xl font-bold text-[#0F1717] leading-7 sm:leading-[30px] self-stretch text-center">{statistics?.pendingStudents || 0}</span>
             </div>
-            <div className="flex min-w-[158px] flex-1 flex-col items-center gap-4 bg-white border border-[#DBE5E0] rounded-xl p-6">
-              <span className="text-xs text-[#5E8C7D] leading-[14.4px] self-stretch">Active Teachers</span>
-                  <span className="text-2xl font-bold text-[#0F1717] leading-[30px] self-stretch">{statistics?.activeTeachers || 0}</span>
+            <div className="flex min-w-0 flex-1 flex-col items-center gap-3 sm:gap-4 bg-white border border-[#DBE5E0] rounded-xl p-4 sm:p-6">
+              <span className="text-xs text-[#5E8C7D] leading-[14.4px] self-stretch text-center">Active Teachers</span>
+                  <span className="text-xl sm:text-2xl font-bold text-[#0F1717] leading-7 sm:leading-[30px] self-stretch text-center">{statistics?.activeTeachers || 0}</span>
             </div>
-            <div className="flex min-w-[158px] flex-1 flex-col items-center gap-4 bg-white border border-[#DBE5E0] rounded-xl p-6">
-              <span className="text-xs text-[#5E8C7D] leading-[14.4px] self-stretch">Pending Batch Enrollments</span>
-                  <span className="text-2xl font-bold text-[#0F1717] leading-[30px] self-stretch">{pendingEnrollments.length}</span>
+            <div className="flex min-w-0 flex-1 flex-col items-center gap-3 sm:gap-4 bg-white border border-[#DBE5E0] rounded-xl p-4 sm:p-6">
+              <span className="text-xs text-[#5E8C7D] leading-[14.4px] self-stretch text-center">Pending Batch Enrollments</span>
+                  <span className="text-xl sm:text-2xl font-bold text-[#0F1717] leading-7 sm:leading-[30px] self-stretch text-center">{pendingEnrollments.length}</span>
             </div>
           </div>
 

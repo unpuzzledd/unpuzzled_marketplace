@@ -3,9 +3,6 @@ import { User as SupabaseUser } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import { User, AuthContextType } from '../types/auth'
 
-// Debug: Log Supabase configuration
-console.log('🔧 Supabase URL:', import.meta.env.VITE_SUPABASE_URL?.substring(0, 30) + '...')
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export const useAuth = () => {
@@ -34,6 +31,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Safety timeout - reduced to 3 seconds for faster feedback
     const timeout = setTimeout(() => {
+      console.log('⚠️ Safety timeout triggered - auth took too long')
       if (mountedRef.current) {
         setLoading(false)
         initializingRef.current = false
@@ -44,7 +42,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const initializeAuth = async () => {
       console.log('🔵 initializeAuth starting...')
       try {
-        const { data: { session }, error } = await supabase.auth.getSession()
+        console.log('🔵 Calling getSession...')
+        
+        // Add timeout to getSession to prevent infinite hang
+        const sessionPromise = supabase.auth.getSession()
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('getSession timeout after 5s')), 5000)
+        )
+        
+        const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise]) as Awaited<ReturnType<typeof supabase.auth.getSession>>
         
         console.log('🔵 getSession result:', { hasSession: !!session, hasUser: !!session?.user, error })
         

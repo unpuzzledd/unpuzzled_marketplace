@@ -17,6 +17,7 @@ const AdminDashboard = () => {
   const [recentActivities, setRecentActivities] = useState<any[]>([])
   const [dataLoading, setDataLoading] = useState(true)
   const [dataError, setDataError] = useState<string | null>(null)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     // Always check localStorage directly for most up-to-date state
@@ -154,73 +155,73 @@ const AdminDashboard = () => {
 
     return (
       <div>
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">Dashboard</h2>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold">Dashboard</h2>
           <button 
             onClick={loadDashboardData}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm sm:text-base min-h-[44px] sm:min-h-0"
           >
             Refresh
           </button>
         </div>
         
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white p-4 border rounded shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-600">Total Academies</h3>
-            <p className="text-3xl font-bold text-blue-600">{stats?.totalAcademies || 0}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+          <div className="bg-white p-3 sm:p-4 border rounded shadow-sm">
+            <h3 className="text-sm sm:text-lg font-semibold text-gray-600">Total Academies</h3>
+            <p className="text-2xl sm:text-3xl font-bold text-blue-600">{stats?.totalAcademies || 0}</p>
           </div>
-          <div className="bg-white p-4 border rounded shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-600">Pending Academies</h3>
-            <p className="text-3xl font-bold text-yellow-600">{stats?.pendingAcademies || 0}</p>
+          <div className="bg-white p-3 sm:p-4 border rounded shadow-sm">
+            <h3 className="text-sm sm:text-lg font-semibold text-gray-600">Pending Academies</h3>
+            <p className="text-2xl sm:text-3xl font-bold text-yellow-600">{stats?.pendingAcademies || 0}</p>
           </div>
-          <div className="bg-white p-4 border rounded shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-600">Active Academies</h3>
-            <p className="text-3xl font-bold text-green-600">{stats?.activeAcademies || 0}</p>
+          <div className="bg-white p-3 sm:p-4 border rounded shadow-sm">
+            <h3 className="text-sm sm:text-lg font-semibold text-gray-600">Active Academies</h3>
+            <p className="text-2xl sm:text-3xl font-bold text-green-600">{stats?.activeAcademies || 0}</p>
           </div>
-          <div className="bg-white p-4 border rounded shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-600">Pending Photos</h3>
-            <p className="text-3xl font-bold text-purple-600">{stats?.pendingPhotos || 0}</p>
+          <div className="bg-white p-3 sm:p-4 border rounded shadow-sm">
+            <h3 className="text-sm sm:text-lg font-semibold text-gray-600">Pending Photos</h3>
+            <p className="text-2xl sm:text-3xl font-bold text-purple-600">{stats?.pendingPhotos || 0}</p>
           </div>
         </div>
 
         {/* Additional Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white p-4 border rounded shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-600">Suspended Academies</h3>
-            <p className="text-3xl font-bold text-red-600">{stats?.suspendedAcademies || 0}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+          <div className="bg-white p-3 sm:p-4 border rounded shadow-sm">
+            <h3 className="text-sm sm:text-lg font-semibold text-gray-600">Suspended Academies</h3>
+            <p className="text-2xl sm:text-3xl font-bold text-red-600">{stats?.suspendedAcademies || 0}</p>
           </div>
-          <div className="bg-white p-4 border rounded shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-600">Total Photos</h3>
-            <p className="text-3xl font-bold text-indigo-600">{stats?.totalPhotos || 0}</p>
+          <div className="bg-white p-3 sm:p-4 border rounded shadow-sm">
+            <h3 className="text-sm sm:text-lg font-semibold text-gray-600">Total Photos</h3>
+            <p className="text-2xl sm:text-3xl font-bold text-indigo-600">{stats?.totalPhotos || 0}</p>
           </div>
-          <div className="bg-white p-4 border rounded shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-600">Pending Skills</h3>
-            <p className="text-3xl font-bold text-orange-600">{stats?.pendingSkills || 0}</p>
+          <div className="bg-white p-3 sm:p-4 border rounded shadow-sm">
+            <h3 className="text-sm sm:text-lg font-semibold text-gray-600">Pending Skills</h3>
+            <p className="text-2xl sm:text-3xl font-bold text-orange-600">{stats?.pendingSkills || 0}</p>
           </div>
-          <div className="bg-white p-4 border rounded shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-600">Total Admins</h3>
-            <p className="text-3xl font-bold text-teal-600">{stats?.totalAdmins || 0}</p>
+          <div className="bg-white p-3 sm:p-4 border rounded shadow-sm">
+            <h3 className="text-sm sm:text-lg font-semibold text-gray-600">Total Admins</h3>
+            <p className="text-2xl sm:text-3xl font-bold text-teal-600">{stats?.totalAdmins || 0}</p>
           </div>
         </div>
 
         {/* Recent Activities */}
         <div className="bg-white border rounded shadow-sm">
-          <h3 className="text-lg font-semibold p-4 border-b">Recent Activities</h3>
+          <h3 className="text-base sm:text-lg font-semibold p-3 sm:p-4 border-b">Recent Activities</h3>
           <div className="divide-y divide-gray-200">
             {recentActivities.length === 0 ? (
-              <div className="p-4 text-center text-gray-500">
+              <div className="p-3 sm:p-4 text-center text-gray-500 text-sm">
                 No recent activities
               </div>
             ) : (
               recentActivities.map((activity, index) => (
-                <div key={index} className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{activity.title}</p>
-                      <p className="text-sm text-gray-500">{activity.description}</p>
+                <div key={index} className="p-3 sm:p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
+                    <div className="flex-1">
+                      <p className="text-xs sm:text-sm font-medium text-gray-900">{activity.title}</p>
+                      <p className="text-xs sm:text-sm text-gray-500">{activity.description}</p>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center gap-2 sm:space-x-2">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                         activity.status === 'active' ? 'bg-green-100 text-green-800' :
                         activity.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
@@ -274,15 +275,15 @@ const AdminDashboard = () => {
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
+          <div className="flex justify-between items-center py-3 sm:py-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Admin Panel</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Admin Panel</h1>
             </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">{adminUser?.name} ({adminUser?.role})</span>
+            <div className="flex items-center gap-2 sm:space-x-4">
+              <span className="hidden sm:inline text-xs sm:text-sm text-gray-600">{adminUser?.name} ({adminUser?.role})</span>
               <button 
                 onClick={handleLogout}
-                className="bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700"
+                className="bg-red-600 text-white px-3 sm:px-4 py-2 rounded text-xs sm:text-sm hover:bg-red-700 min-h-[44px] sm:min-h-0"
               >
                 Logout
               </button>
@@ -292,12 +293,12 @@ const AdminDashboard = () => {
       </header>
 
       {/* Navigation */}
-      <nav className="bg-white border-b">
+      <nav className="bg-white border-b overflow-x-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-8">
+          <div className="flex space-x-4 sm:space-x-8 min-w-max sm:min-w-0">
             <button
               onClick={() => setCurrentPage('dashboard')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap min-h-[44px] sm:min-h-0 ${
                 currentPage === 'dashboard'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -307,7 +308,7 @@ const AdminDashboard = () => {
             </button>
             <button
               onClick={() => setCurrentPage('academies')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap min-h-[44px] sm:min-h-0 ${
                 currentPage === 'academies'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -317,7 +318,7 @@ const AdminDashboard = () => {
             </button>
             <button
               onClick={() => setCurrentPage('locations')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap min-h-[44px] sm:min-h-0 ${
                 currentPage === 'locations'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -327,7 +328,7 @@ const AdminDashboard = () => {
             </button>
             <button
               onClick={() => setCurrentPage('skills')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap min-h-[44px] sm:min-h-0 ${
                 currentPage === 'skills'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
@@ -337,7 +338,7 @@ const AdminDashboard = () => {
             </button>
             <button
               onClick={() => setCurrentPage('photos')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap min-h-[44px] sm:min-h-0 ${
                 currentPage === 'photos'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700'

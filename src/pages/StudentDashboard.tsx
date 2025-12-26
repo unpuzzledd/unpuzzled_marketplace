@@ -12,6 +12,7 @@ const StudentDashboard = () => {
   // UI State
   const [selectedCourse, setSelectedCourse] = useState('all')
   const [activeNav, setActiveNav] = useState('Home')
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   
   // Data State
   const [batches, setBatches] = useState<any[]>([])
@@ -157,18 +158,28 @@ const StudentDashboard = () => {
   return (
     <div className="flex flex-col w-full min-h-screen bg-white font-lexend">
       {/* Header */}
-      <header className="flex justify-between items-center px-10 py-3 border-b border-[#E5E8EB] bg-white">
-        <div className="flex items-center gap-4">
+      <header className="flex justify-between items-center px-4 sm:px-6 md:px-10 py-3 border-b border-[#E5E8EB] bg-white">
+        <div className="flex items-center gap-2 sm:gap-4">
+          {/* Hamburger Menu Button - Mobile Only */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden p-2 -ml-2"
+            aria-label="Toggle menu"
+          >
+            <svg className="w-6 h-6 text-[#0F1717]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
           <div className="flex flex-col">
             <svg width="16" height="16" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path fillRule="evenodd" clipRule="evenodd" d="M8.14199e-05 0.000325561H4.44455V4.44479H8.88895V8.88919H13.3334V13.3337H8.14199e-05V0.000325561Z" fill="#0F1717"/>
             </svg>
           </div>
-          <div className="font-bold text-lg text-[#0F1717]">Unpuzzle Club</div>
+          <div className="font-bold text-base sm:text-lg text-[#0F1717]">Unpuzzle Club</div>
         </div>
 
-        <div className="flex items-center gap-8 flex-1 justify-end">
-          <nav className="flex items-center gap-9 h-10">
+        <div className="flex items-center gap-2 sm:gap-4 md:gap-8 flex-1 justify-end">
+          <nav className="hidden md:flex items-center gap-6 lg:gap-9 h-10">
             <button 
               onClick={() => setActiveNav('Home')}
               className={`text-sm font-normal ${activeNav === 'Home' ? 'text-[#009963] font-semibold' : 'text-[#0F1717]'}`}
@@ -190,24 +201,24 @@ const StudentDashboard = () => {
             <button className="text-[#0F1717] text-sm font-normal">Announcements</button>
           </nav>
 
-          <div className="flex items-center gap-6">
-            <button className="flex items-center justify-center w-10 h-10 rounded-full bg-[#F0F5F2] p-2.5">
-              <BellIcon className="w-5 h-5 text-[#0F1717]" />
+          <div className="flex items-center gap-2 sm:gap-4 md:gap-6">
+            <button className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#F0F5F2] p-2 sm:p-2.5">
+              <BellIcon className="w-4 h-4 sm:w-5 sm:h-5 text-[#0F1717]" />
             </button>
             
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 bg-[#5E8C7D] rounded-full">
-                <span className="text-white font-bold text-lg">
+            <div className="hidden sm:flex items-center gap-2 md:gap-3">
+              <div className="flex items-center justify-center w-8 h-8 md:w-10 md:h-10 bg-[#5E8C7D] rounded-full">
+                <span className="text-white font-bold text-sm md:text-lg">
                   {user?.full_name?.charAt(0).toUpperCase() || 'S'}
                 </span>
               </div>
-              <div className="text-right">
+              <div className="hidden md:block text-right">
                 <p className="text-sm font-medium text-[#0F1717]">{user?.full_name || 'Student'}</p>
                 <p className="text-xs text-[#5E8C7D]">Student</p>
               </div>
               <button
                 onClick={handleSignOut}
-                className="px-4 py-2 bg-[#F0F5F2] text-[#0D1C17] font-medium text-sm rounded-lg hover:bg-[#E5F5F0] transition-colors"
+                className="px-3 sm:px-4 py-1.5 sm:py-2 bg-[#F0F5F2] text-[#0D1C17] font-medium text-xs sm:text-sm rounded-lg hover:bg-[#E5F5F0] transition-colors min-h-[44px]"
               >
                 Logout
               </button>
@@ -216,9 +227,29 @@ const StudentDashboard = () => {
         </div>
       </header>
 
-      <div className="flex min-h-[800px] bg-[#F7FCFA]">
+      <div className="flex min-h-[800px] bg-[#F7FCFA] relative">
+        {/* Mobile Menu Overlay */}
+        {isMobileMenuOpen && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+        )}
+
         {/* Sidebar */}
-        <aside className="w-[269px] min-h-[700px] bg-white rounded-2xl m-5 p-4 flex flex-col justify-between">
+        <aside className={`fixed md:static inset-y-0 left-0 z-50 md:z-auto w-[269px] min-h-[700px] bg-white rounded-2xl m-0 md:m-5 p-4 flex flex-col justify-between transform transition-transform duration-300 ease-in-out md:translate-x-0 ${
+          isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        }`}>
+          {/* Close button for mobile */}
+          <button
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="md:hidden absolute top-4 right-4 p-2"
+            aria-label="Close menu"
+          >
+            <svg className="w-6 h-6 text-[#0F1717]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
           <div className="flex flex-col gap-4">
             {/* User Profile */}
             <div className="flex items-start gap-3">
@@ -268,14 +299,14 @@ const StudentDashboard = () => {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 max-w-[960px] flex flex-col">
+        <main className="flex-1 max-w-[960px] flex flex-col w-full">
           {/* Welcome Section */}
-          <div className="flex flex-wrap justify-between items-start gap-3 p-4">
-            <div className="flex flex-col gap-3 min-w-[288px]">
-              <h1 className="text-[32px] font-bold leading-10 text-[#0F1717]">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 sm:gap-3 p-4 sm:p-6">
+            <div className="flex flex-col gap-2 sm:gap-3 w-full sm:min-w-[288px]">
+              <h1 className="text-2xl sm:text-3xl md:text-[32px] font-bold leading-tight sm:leading-10 text-[#0F1717]">
                 Welcome back, {user?.full_name?.split(' ')[0] || 'Student'}!
               </h1>
-              <p className="text-sm font-normal leading-[21px] text-[#5E8C7D]">
+              <p className="text-xs sm:text-sm font-normal leading-5 sm:leading-[21px] text-[#5E8C7D]">
                 {statistics ? (
                   <>You've mastered {statistics.completedTopics} topics and have {statistics.upcomingTopics} upcoming.</>
                 ) : (
@@ -284,12 +315,12 @@ const StudentDashboard = () => {
               </p>
             </div>
 
-            <div className="flex flex-col items-end gap-1">
-              <div className="text-base font-bold text-[#121212]">Your Course</div>
+            <div className="flex flex-col sm:items-end gap-1 w-full sm:w-auto">
+              <div className="text-sm sm:text-base font-bold text-[#121212]">Your Course</div>
               <select
                 value={selectedCourse}
                 onChange={(e) => setSelectedCourse(e.target.value)}
-                className="flex items-center justify-center gap-1 px-4 h-8 min-w-[84px] max-w-[480px] rounded-lg bg-[#009963] text-white text-sm font-normal appearance-none cursor-pointer pr-8"
+                className="w-full sm:w-auto flex items-center justify-center gap-1 px-4 h-10 sm:h-8 min-w-[84px] sm:max-w-[480px] rounded-lg bg-[#009963] text-white text-sm font-normal appearance-none cursor-pointer pr-8"
               >
                 <option value="all">All Courses</option>
                 {batches.map(batch => (
@@ -302,10 +333,10 @@ const StudentDashboard = () => {
           </div>
 
           {/* Upcoming Activities */}
-          <div className="px-3 mx-3">
-            <div className="flex gap-6 p-6 rounded-xl border border-[#DBE5E0] bg-white h-[283px]">
+          <div className="px-3 sm:px-4 md:px-6 mx-2 sm:mx-3">
+            <div className="flex gap-4 sm:gap-6 p-4 sm:p-6 rounded-xl border border-[#DBE5E0] bg-white min-h-[283px] sm:h-[283px]">
               <div className="flex flex-col gap-3 flex-1">
-                <h2 className="text-xl font-bold leading-[31px] text-[#121212]">
+                <h2 className="text-lg sm:text-xl font-bold leading-7 sm:leading-[31px] text-[#121212]">
                   Upcoming Activities
                 </h2>
                 
@@ -384,18 +415,18 @@ const StudentDashboard = () => {
 
           {/* Pending Enrollments */}
           {pendingEnrollments.length > 0 && (
-            <div className="px-3 mx-3 mb-4">
-              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-                <h3 className="text-lg font-bold text-yellow-900 mb-2">
+            <div className="px-3 sm:px-4 md:px-6 mx-2 sm:mx-3 mb-4">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 sm:p-4">
+                <h3 className="text-base sm:text-lg font-bold text-yellow-900 mb-2">
                   Pending Enrollment Requests ({pendingEnrollments.length})
                 </h3>
                 <div className="space-y-2">
                   {pendingEnrollments.map((enrollment) => (
-                    <div key={enrollment.id} className="flex items-center justify-between text-sm">
-                      <span className="text-yellow-800">
+                    <div key={enrollment.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs sm:text-sm">
+                      <span className="text-yellow-800 break-words">
                         {enrollment.name} - {enrollment.academy?.name}
                       </span>
-                      <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">
+                      <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full w-fit">
                         Pending Approval
                       </span>
                     </div>
@@ -407,37 +438,38 @@ const StudentDashboard = () => {
 
           {/* Topics Covered */}
           <div className="flex flex-col mt-3">
-            <div className="px-4 py-5 pb-3">
-              <h2 className="text-[22px] font-bold leading-7 text-[#0F1717]">
+            <div className="px-4 sm:px-6 py-4 sm:py-5 pb-3">
+              <h2 className="text-lg sm:text-xl md:text-[22px] font-bold leading-6 sm:leading-7 text-[#0F1717]">
                 Topics Covered
               </h2>
             </div>
 
-            <div className="flex gap-2">
-              <div className="flex-1 min-h-[524px]">
-                <div className="flex flex-col h-full p-[29px] rounded-xl border border-[#DBE6E0] bg-white">
-                  <div className="flex justify-between items-center mb-[18px]">
-                    <div className="text-lg font-normal text-[#1C1D1D] opacity-80">
+            <div className="flex gap-2 px-2 sm:px-4">
+              <div className="flex-1 min-h-[400px] sm:min-h-[524px]">
+                <div className="flex flex-col h-full p-4 sm:p-6 md:p-[29px] rounded-xl border border-[#DBE6E0] bg-white">
+                  <div className="flex justify-between items-center mb-4 sm:mb-[18px]">
+                    <div className="text-base sm:text-lg font-normal text-[#1C1D1D] opacity-80">
                       Enrolled Classes
                     </div>
                     <button className="flex items-center justify-center w-6 h-6 p-1 rounded-full bg-[rgba(28,29,29,0.05)]">
-                      <MagnifyingGlassIcon className="w-6 h-6 text-[#1C1D1D]" />
+                      <MagnifyingGlassIcon className="w-5 h-5 sm:w-6 sm:h-6 text-[#1C1D1D]" />
                     </button>
                   </div>
 
-                  <div className="flex flex-col gap-[18px] overflow-y-auto">
+                  <div className="flex flex-col gap-3 sm:gap-[18px] overflow-y-auto">
                     {filteredBatches.length === 0 ? (
-                      <div className="flex justify-center items-center py-8 text-[#5E8C7D] text-sm">
+                      <div className="flex justify-center items-center py-8 text-[#5E8C7D] text-xs sm:text-sm">
                         {batches.length === 0 ? 'No enrolled courses yet' : 'No courses match the filter'}
                       </div>
                     ) : (
                       filteredBatches.map((batch) => (
                           <div
                             key={batch.id}
-                            className="flex items-center gap-6 min-h-[92px] p-4 rounded-xl border border-[#DBE5E0] bg-white cursor-pointer hover:shadow-md transition-shadow"
+                            onClick={() => setSelectedBatch(batch)}
+                            className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 min-h-[120px] sm:min-h-[92px] p-3 sm:p-4 rounded-xl border border-[#DBE5E0] bg-white cursor-pointer hover:shadow-md transition-shadow"
                           >
                             <div className="flex items-center gap-2.5">
-                              <div className="flex items-center justify-center w-[52px] h-[52px] p-2.5 rounded bg-[rgba(28,29,29,0.05)]">
+                              <div className="flex items-center justify-center w-[48px] h-[48px] sm:w-[52px] sm:h-[52px] p-2 sm:p-2.5 rounded bg-[rgba(28,29,29,0.05)] flex-shrink-0">
                                 {/* Skill icon - can be customized based on skill */}
                                 <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
                                   <rect width="32" height="32" rx="4" fill="#5E8C7D"/>
@@ -446,15 +478,21 @@ const StudentDashboard = () => {
                                 </svg>
                               </div>
                             </div>
-                            <div className="flex flex-col gap-2 flex-1">
-                              <div className="text-lg font-bold text-[#5E8C7D]">
+                            <div className="flex flex-col gap-1 sm:gap-2 flex-1 min-w-0">
+                              <div className="text-base sm:text-lg font-bold text-[#5E8C7D] break-words">
                                 {batch.name}
                               </div>
-                              <div className="text-sm font-normal text-[#5E8C7D]">
+                              <div className="text-xs sm:text-sm font-normal text-[#5E8C7D] break-words">
                                 {batch.skill?.name} • {batch.academy?.name}
                               </div>
                             </div>
-                            <button className="inline-flex items-center justify-center px-4 py-3 rounded-md bg-[#009963] text-white text-base font-normal h-11 w-[70px] hover:bg-[#007a4f] transition-colors">
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSelectedBatch(batch)
+                              }}
+                              className="inline-flex items-center justify-center px-4 py-2.5 sm:py-3 rounded-md bg-[#009963] text-white text-sm sm:text-base font-normal h-10 sm:h-11 w-full sm:w-[70px] hover:bg-[#007a4f] transition-colors min-h-[44px]"
+                            >
                               View
                             </button>
                           </div>
@@ -467,22 +505,22 @@ const StudentDashboard = () => {
           </div>
 
           {/* Footer */}
-          <footer className="flex flex-col items-center gap-6 p-10 mt-auto">
-            <div className="flex flex-wrap justify-center items-center gap-6">
-              <button className="text-base text-center text-[#5E8C7D] min-w-[160px]">
+          <footer className="flex flex-col items-center gap-4 sm:gap-6 p-6 sm:p-8 md:p-10 mt-auto">
+            <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-6">
+              <button className="text-sm sm:text-base text-center text-[#5E8C7D] min-w-[120px] sm:min-w-[160px]">
                 About
               </button>
-              <button className="text-base text-center text-[#5E8C7D] min-w-[160px]">
+              <button className="text-sm sm:text-base text-center text-[#5E8C7D] min-w-[120px] sm:min-w-[160px]">
                 Contact
               </button>
-              <button className="text-base text-center text-[#5E8C7D] min-w-[160px]">
+              <button className="text-sm sm:text-base text-center text-[#5E8C7D] min-w-[120px] sm:min-w-[160px]">
                 Terms of Service
               </button>
-              <button className="text-base text-center text-[#5E8C7D] min-w-[160px]">
+              <button className="text-sm sm:text-base text-center text-[#5E8C7D] min-w-[120px] sm:min-w-[160px]">
                 Privacy Policy
               </button>
             </div>
-            <div className="text-base text-center text-[#5E8C7D]">
+            <div className="text-xs sm:text-sm md:text-base text-center text-[#5E8C7D]">
               @2024 Unpuzzle Club. All rights reserved.
             </div>
           </footer>
