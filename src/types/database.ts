@@ -170,6 +170,10 @@ export interface User {
   full_name: string | null;
   role: 'student' | 'teacher' | 'academy_owner' | 'admin' | 'super_admin' | null;
   phone_number: string | null;
+  date_of_birth: string | null;  // ISO date string
+  school_name: string | null;
+  location: string | null;  // Society name
+  teacher_skills: string[] | null;  // Array of skill IDs for teachers
   status: 'active' | 'suspended' | 'pending';
   created_at: string;
   updated_at: string;

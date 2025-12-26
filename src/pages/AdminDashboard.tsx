@@ -17,6 +17,7 @@ const AdminDashboard = () => {
   const [recentActivities, setRecentActivities] = useState<any[]>([])
   const [dataLoading, setDataLoading] = useState(true)
   const [dataError, setDataError] = useState<string | null>(null)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     // Always check localStorage directly for most up-to-date state

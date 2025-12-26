@@ -361,6 +361,76 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
+  const updateUserProfile = async (profileData: {
+    full_name?: string;
+    phone_number?: string;
+    date_of_birth?: string;
+    school_name?: string;
+    location?: string;
+    teacher_skills?: string[];
+  }): Promise<{ success: boolean; error?: string }> => {
+    if (!user) {
+      return { success: false, error: 'User not found' }
+    }
+
+    try {
+      setLoading(true)
+      
+      // Prepare update data
+      const updateData: Record<string, any> = {}
+      if (profileData.full_name !== undefined) updateData.full_name = profileData.full_name || null
+      if (profileData.phone_number !== undefined) updateData.phone_number = profileData.phone_number || null
+      if (profileData.date_of_birth !== undefined) updateData.date_of_birth = profileData.date_of_birth || null
+      if (profileData.school_name !== undefined) updateData.school_name = profileData.school_name || null
+      if (profileData.location !== undefined) updateData.location = profileData.location || null
+      if (profileData.teacher_skills !== undefined) {
+        // Store as JSONB array
+        updateData.teacher_skills = profileData.teacher_skills.length > 0 ? profileData.teacher_skills : []
+      }
+
+      console.log('Updating user profile:', { userId: user.id, updateData })
+
+      // Update user profile
+      const { data, error } = await supabase
+        .from('users')
+        .update(updateData)
+        .eq('id', user.id)
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Error updating user profile:', error)
+        return { success: false, error: error.message }
+      }
+
+      console.log('User profile updated successfully:', data)
+      setUser(data)
+      return { success: true }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Error updating profile. Please try again.'
+      return { success: false, error: errorMessage }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const isProfileComplete = (user: User | null, role: string | null): boolean => {
+    if (!user || !role) return false
+
+    // For students: require full_name and date_of_birth
+    if (role === 'student') {
+      return !!(user.full_name && user.date_of_birth)
+    }
+
+    // For teachers: require full_name and phone_number
+    if (role === 'teacher') {
+      return !!(user.full_name && user.phone_number)
+    }
+
+    // For academy_owner and other roles, just check full_name
+    return !!user.full_name
+  }
+
   const value: AuthContextType = {
     user,
     loading,
@@ -368,7 +438,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     signInWithGoogle,
     smartLoginWithGoogle,
     signOut,
-    updateUserRole
+    updateUserRole,
+    updateUserProfile,
+    isProfileComplete
   }
 
   return (

@@ -4,6 +4,7 @@ import { AdminAuthProvider } from './hooks/useAdminAuth'
 import Home from './pages/Home'
 import SignIn from './pages/SignIn'
 import RoleSelection from './pages/RoleSelection'
+import ProfileCompletion from './pages/ProfileCompletion'
 import Dashboard from './pages/Dashboard'
 import StudentDashboard from './pages/StudentDashboard'
 import StudentCourses from './pages/StudentCourses'
@@ -26,6 +27,7 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/signin" element={<SignIn />} />
             <Route path="/role-selection" element={<RoleSelection />} />
+            <Route path="/profile-completion" element={<ProfileCompletion />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/student" element={<StudentDashboard />} />
             <Route path="/student/courses" element={<StudentCourses />} />

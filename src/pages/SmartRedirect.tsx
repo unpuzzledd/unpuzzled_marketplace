@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 
 const SmartRedirect = () => {
-  const { user, loading } = useAuth()
+  const { user, loading, isProfileComplete } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -13,14 +13,22 @@ const SmartRedirect = () => {
         // Redirect to admin dashboard
         navigate('/admin')
       } else if (user.role === 'academy_owner') {
-        // Academy owner - go to academy dashboard
+        // Academy owner - go to academy dashboard (no profile completion needed)
         navigate('/academy')
       } else if (user.role === 'teacher') {
-        // Teacher - go to teacher landing page
-        navigate('/teacher')
+        // Teacher - check if profile is complete
+        if (isProfileComplete(user, user.role)) {
+          navigate('/teacher')
+        } else {
+          navigate('/profile-completion')
+        }
       } else if (user.role === 'student') {
-        // Student - go to student dashboard
-        navigate('/student')
+        // Student - check if profile is complete
+        if (isProfileComplete(user, user.role)) {
+          navigate('/student')
+        } else {
+          navigate('/profile-completion')
+        }
       } else if (user.role) {
         // Other roles - go to dashboard
         navigate('/dashboard')
@@ -32,7 +40,7 @@ const SmartRedirect = () => {
       // No user - redirect to home
       navigate('/')
     }
-  }, [user, loading, navigate])
+  }, [user, loading, navigate, isProfileComplete])
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center">

@@ -49,13 +49,15 @@ const RoleSelection = () => {
         return
       }
       
-      // Redirect based on selected role
+      // After role update, check if profile is complete
+      // Note: We need to wait for the user state to update, so we'll check after a brief delay
+      // or redirect to profile completion for students and teachers
       if (selectedRole === 'academy_owner') {
+        // Academy owners don't need profile completion, go directly to dashboard
         navigate('/academy')
-      } else if (selectedRole === 'teacher') {
-        navigate('/teacher')
-      } else if (selectedRole === 'student') {
-        navigate('/student')
+      } else if (selectedRole === 'teacher' || selectedRole === 'student') {
+        // Students and teachers need to complete profile
+        navigate('/profile-completion')
       } else {
         navigate('/dashboard')
       }
