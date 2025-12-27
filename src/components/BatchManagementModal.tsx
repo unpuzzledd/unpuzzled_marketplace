@@ -5,7 +5,7 @@ import { CreateTopic } from './CreateTopic';
 import { UpdateTopic } from './UpdateTopic';
 import { ViewTopic } from '../pages/ViewTopic';
 import { useAuth } from '../hooks/useAuth';
-import { generateUpcomingClasses, mergeScheduleWithExceptions, formatScheduleTime, getDayName } from '../utils/scheduleUtils';
+import { generateUpcomingClasses, formatScheduleTime, getDayName } from '../utils/scheduleUtils';
 
 interface BatchManagementModalProps {
   isOpen: boolean;
@@ -20,6 +20,7 @@ interface BatchManagementModalProps {
     status: string;
     start_date?: string;
     end_date?: string;
+    weekly_schedule?: WeeklyScheduleEntry[] | null;
     skill?: {
       id: string;
       name: string;
@@ -106,8 +107,9 @@ export const BatchManagementModal: React.FC<BatchManagementModalProps> = ({
 
         if (batch.weekly_schedule && Array.isArray(batch.weekly_schedule)) {
           // Map existing schedule to form state
+          const weeklySchedule = batch.weekly_schedule;
           defaultSchedule.forEach((daySchedule, index) => {
-            const existing = batch.weekly_schedule.find(
+            const existing = weeklySchedule.find(
               (s: WeeklyScheduleEntry) => s.day.toLowerCase() === daySchedule.day
             );
             if (existing) {
@@ -223,8 +225,9 @@ export const BatchManagementModal: React.FC<BatchManagementModalProps> = ({
           // Use the earlier of: next week end date or batch end date
           const endDate = new Date(batch.end_date) < nextWeekEnd ? batch.end_date : nextWeekEnd.toISOString().split('T')[0];
           
+          const weeklySchedule = batch.weekly_schedule;
           const classes = generateUpcomingClasses(
-            batch.weekly_schedule,
+            weeklySchedule,
             startDate,
             endDate
           );
@@ -895,7 +898,7 @@ export const BatchManagementModal: React.FC<BatchManagementModalProps> = ({
                   <div className="mt-4 pt-4 border-t border-[#DBE5E0]">
                     <h4 className="font-medium text-[#0F1717] mb-2">Regular Schedule</h4>
                     <div className="space-y-1">
-                      {batch.weekly_schedule.map((entry, index) => (
+                      {batch.weekly_schedule.map((entry: WeeklyScheduleEntry, index: number) => (
                         <div key={index} className="text-sm text-[#5E8C7D]">
                           {getDayName(entry.day)}: {formatScheduleTime(entry.from_time)} - {formatScheduleTime(entry.to_time)}
                         </div>

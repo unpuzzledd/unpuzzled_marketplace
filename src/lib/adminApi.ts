@@ -5,7 +5,8 @@ import {
   Skill, 
   Admin,
   ApiResponse,
-  PaginatedResponse 
+  PaginatedResponse,
+  WeeklyScheduleEntry
 } from '../types/database';
 
 export class AdminApi {

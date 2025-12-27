@@ -26,7 +26,6 @@ export const StudentBatchDetailModal = ({
   const [loading, setLoading] = useState(true)
   const [showViewTopic, setShowViewTopic] = useState(false)
   const [selectedTopic, setSelectedTopic] = useState<any>(null)
-  const [mergedSchedule, setMergedSchedule] = useState<any[]>([])
 
   useEffect(() => {
     const fetchBatchData = async () => {
@@ -34,12 +33,11 @@ export const StudentBatchDetailModal = ({
 
       setLoading(true)
       try {
-        const [detailsRes, topicsRes, scoreRes, rankRes, exceptionsRes] = await Promise.all([
+        const [detailsRes, topicsRes, scoreRes, rankRes] = await Promise.all([
           StudentApi.getBatchDetails(batch.id, studentId),
           StudentApi.getBatchTopics(batch.id),
           StudentApi.getBatchScore(studentId, batch.id),
-          StudentApi.getMyRankInBatch(studentId, batch.id),
-          AdminApi.getBatchScheduleExceptions(batch.id)
+          StudentApi.getMyRankInBatch(studentId, batch.id)
         ])
 
         if (detailsRes.data) setBatchDetails(detailsRes.data)
@@ -47,18 +45,7 @@ export const StudentBatchDetailModal = ({
         if (scoreRes.data) setScore(scoreRes.data)
         if (rankRes.data) setRank(rankRes.data)
 
-        // Merge schedule with exceptions
-        if (batch.weekly_schedule && batch.weekly_schedule.length > 0 && batch.start_date && batch.end_date) {
-          const merged = mergeScheduleWithExceptions(
-            batch.weekly_schedule,
-            exceptionsRes.data || [],
-            batch.start_date,
-            batch.end_date
-          )
-          setMergedSchedule(merged)
-        } else {
-          setMergedSchedule([])
-        }
+        // Note: Schedule merging is handled in the display component if needed
       } catch (error) {
         console.error('Error fetching batch data:', error)
       } finally {

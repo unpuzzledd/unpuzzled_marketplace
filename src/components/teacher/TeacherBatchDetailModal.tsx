@@ -405,7 +405,7 @@ export const TeacherBatchDetailModal: React.FC<TeacherBatchDetailModalProps> = (
                           </div>
                         ) : (
                           <div className="text-sm text-[#5E8C7D]">
-                            {batch.weekly_schedule.map((entry, idx) => (
+                            {batch.weekly_schedule.map((entry: any, idx: number) => (
                               <div key={idx} className="mb-1">
                                 {getDayName(entry.day)}: {formatScheduleTime(entry.from_time)} - {formatScheduleTime(entry.to_time)}
                               </div>
