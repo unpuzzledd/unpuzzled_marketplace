@@ -1,0 +1,13 @@
+LOGO REPLACEMENT INSTRUCTIONS
+=============================
+
+Please replace this file with your new UNPUZZLE.CLUB logo image.
+
+Requirements:
+- File name: unpuzzle-logo.png (or .jpg, .svg)
+- Recommended size: 200x60 pixels or similar aspect ratio
+- Format: PNG, JPG, or SVG
+
+The logo should be saved as: public/assets/unpuzzle-logo.png
+
+After saving the logo file, the application will automatically use it in all headers.

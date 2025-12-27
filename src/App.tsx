@@ -16,6 +16,10 @@ import AcademyDashboard from './pages/AcademyDashboard'
 import TeacherLanding from './pages/TeacherLanding'
 import ViewTopic from './pages/ViewTopic'
 import BatchManagement from './pages/BatchManagement'
+import ChessClasses from './pages/ChessClasses'
+import KarateClasses from './pages/KarateClasses'
+import ArtsClasses from './pages/ArtsClasses'
+import DanceMusicClasses from './pages/DanceMusicClasses'
 import { CreateTopicExample } from './examples/CreateTopicExample'
 
 function App() {
@@ -41,6 +45,10 @@ function App() {
             <Route path="/smart-redirect" element={<SmartRedirect />} />
             <Route path="/course/:courseId/topic/:topicId" element={<ViewTopic />} />
             <Route path="/examples/create-topic" element={<CreateTopicExample />} />
+            <Route path="/chess-classes" element={<ChessClasses />} />
+            <Route path="/karate-classes" element={<KarateClasses />} />
+            <Route path="/arts-classes" element={<ArtsClasses />} />
+            <Route path="/dance-music-classes" element={<DanceMusicClasses />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>

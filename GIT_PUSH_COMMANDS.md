@@ -81,3 +81,4 @@ git push -u origin master
 4. **AcademyDashboard.tsx** - Updated to show academy enrollment requests
 5. **fix_student_enrollments_rls.sql** - Added RLS policies for student enrollments
 
+

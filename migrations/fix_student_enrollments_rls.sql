@@ -122,3 +122,4 @@ CREATE POLICY "Admins can manage all enrollments" ON student_enrollments
 -- 4. Admins can do everything
 -- =============================================
 
+

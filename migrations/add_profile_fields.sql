@@ -12,3 +12,4 @@ COMMENT ON COLUMN users.school_name IS 'School name for students (optional)';
 COMMENT ON COLUMN users.location IS 'Location/Society name for students (optional)';
 
 
+
