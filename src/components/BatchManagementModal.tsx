@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { AdminApi } from '../lib/adminApi';
+import { WeeklyScheduleEntry, ScheduleException } from '../types/database';
 import { CreateTopic } from './CreateTopic';
 import { UpdateTopic } from './UpdateTopic';
 import { ViewTopic } from '../pages/ViewTopic';
 import { useAuth } from '../hooks/useAuth';
+import { generateUpcomingClasses, mergeScheduleWithExceptions, formatScheduleTime, getDayName } from '../utils/scheduleUtils';
 
 interface BatchManagementModalProps {
   isOpen: boolean;
@@ -48,7 +50,16 @@ export const BatchManagementModal: React.FC<BatchManagementModalProps> = ({
     max_students: 20,
     status: 'active',
     start_date: '',
-    end_date: ''
+    end_date: '',
+    weekly_schedule: [
+      { day: 'monday' as const, from_time: '', to_time: '', enabled: false },
+      { day: 'tuesday' as const, from_time: '', to_time: '', enabled: false },
+      { day: 'wednesday' as const, from_time: '', to_time: '', enabled: false },
+      { day: 'thursday' as const, from_time: '', to_time: '', enabled: false },
+      { day: 'friday' as const, from_time: '', to_time: '', enabled: false },
+      { day: 'saturday' as const, from_time: '', to_time: '', enabled: false },
+      { day: 'sunday' as const, from_time: '', to_time: '', enabled: false }
+    ]
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,9 +76,51 @@ export const BatchManagementModal: React.FC<BatchManagementModalProps> = ({
   const [showViewTopic, setShowViewTopic] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState<any>(null);
 
+  // Schedule exception states
+  const [scheduleExceptions, setScheduleExceptions] = useState<ScheduleException[]>([]);
+  const [upcomingClasses, setUpcomingClasses] = useState<any[]>([]);
+  const [showExceptionModal, setShowExceptionModal] = useState(false);
+  const [exceptionAction, setExceptionAction] = useState<'cancel' | 'change_time' | 'move' | null>(null);
+  const [selectedClassDate, setSelectedClassDate] = useState<string | null>(null);
+  const [selectedOriginalDay, setSelectedOriginalDay] = useState<string | null>(null);
+  const [exceptionFormData, setExceptionFormData] = useState({
+    newFromTime: '',
+    newToTime: '',
+    newDay: '',
+    notes: ''
+  });
+
   useEffect(() => {
     if (isOpen) {
       if (batch) {
+        // Initialize weekly schedule from batch or default empty schedule
+        const defaultSchedule = [
+          { day: 'monday' as const, from_time: '', to_time: '', enabled: false },
+          { day: 'tuesday' as const, from_time: '', to_time: '', enabled: false },
+          { day: 'wednesday' as const, from_time: '', to_time: '', enabled: false },
+          { day: 'thursday' as const, from_time: '', to_time: '', enabled: false },
+          { day: 'friday' as const, from_time: '', to_time: '', enabled: false },
+          { day: 'saturday' as const, from_time: '', to_time: '', enabled: false },
+          { day: 'sunday' as const, from_time: '', to_time: '', enabled: false }
+        ];
+
+        if (batch.weekly_schedule && Array.isArray(batch.weekly_schedule)) {
+          // Map existing schedule to form state
+          defaultSchedule.forEach((daySchedule, index) => {
+            const existing = batch.weekly_schedule.find(
+              (s: WeeklyScheduleEntry) => s.day.toLowerCase() === daySchedule.day
+            );
+            if (existing) {
+              defaultSchedule[index] = {
+                ...daySchedule,
+                from_time: existing.from_time,
+                to_time: existing.to_time,
+                enabled: true
+              };
+            }
+          });
+        }
+
         setEditedBatch({
           name: batch.name,
           skill_id: batch.skill_id,
@@ -75,7 +128,8 @@ export const BatchManagementModal: React.FC<BatchManagementModalProps> = ({
           max_students: batch.max_students || 20,
           status: batch.status,
           start_date: batch.start_date ? batch.start_date.split('T')[0] : '',
-          end_date: batch.end_date ? batch.end_date.split('T')[0] : ''
+          end_date: batch.end_date ? batch.end_date.split('T')[0] : '',
+          weekly_schedule: defaultSchedule
         });
         setIsCreating(false);
         setIsEditing(false);
@@ -93,7 +147,16 @@ export const BatchManagementModal: React.FC<BatchManagementModalProps> = ({
           max_students: 20,
           status: 'active',
           start_date: today.toISOString().split('T')[0],
-          end_date: threeMonthsLater.toISOString().split('T')[0]
+          end_date: threeMonthsLater.toISOString().split('T')[0],
+          weekly_schedule: [
+            { day: 'monday' as const, from_time: '', to_time: '', enabled: false },
+            { day: 'tuesday' as const, from_time: '', to_time: '', enabled: false },
+            { day: 'wednesday' as const, from_time: '', to_time: '', enabled: false },
+            { day: 'thursday' as const, from_time: '', to_time: '', enabled: false },
+            { day: 'friday' as const, from_time: '', to_time: '', enabled: false },
+            { day: 'saturday' as const, from_time: '', to_time: '', enabled: false },
+            { day: 'sunday' as const, from_time: '', to_time: '', enabled: false }
+          ]
         });
       }
       loadBatchData();
@@ -138,10 +201,57 @@ export const BatchManagementModal: React.FC<BatchManagementModalProps> = ({
         if (topicsResponse.data) {
           setTopics(topicsResponse.data);
         }
+
+        // Load schedule exceptions
+        const exceptionsResponse = await AdminApi.getBatchScheduleExceptions(batch.id);
+        if (exceptionsResponse.data) {
+          setScheduleExceptions(exceptionsResponse.data);
+        }
+
+        // Generate upcoming classes if batch has schedule (limit to next week only)
+        if (batch.weekly_schedule && batch.weekly_schedule.length > 0 && batch.start_date && batch.end_date) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          // Calculate next week's end date (7 days from today)
+          const nextWeekEnd = new Date(today);
+          nextWeekEnd.setDate(today.getDate() + 7);
+          
+          // Use batch start_date if it's in the future, otherwise use today
+          const startDate = new Date(batch.start_date) > today ? batch.start_date : today.toISOString().split('T')[0];
+          
+          // Use the earlier of: next week end date or batch end date
+          const endDate = new Date(batch.end_date) < nextWeekEnd ? batch.end_date : nextWeekEnd.toISOString().split('T')[0];
+          
+          const classes = generateUpcomingClasses(
+            batch.weekly_schedule,
+            startDate,
+            endDate
+          );
+          setUpcomingClasses(classes);
+        } else {
+          setUpcomingClasses([]);
+        }
       }
     } catch (error) {
       console.error('Error loading batch data:', error);
     }
+  };
+
+  const handleScheduleChange = (dayIndex: number, field: 'from_time' | 'to_time' | 'enabled', value: string | boolean) => {
+    setEditedBatch(prev => {
+      const newSchedule = [...prev.weekly_schedule];
+      if (field === 'enabled') {
+        newSchedule[dayIndex] = { ...newSchedule[dayIndex], enabled: value as boolean };
+      } else {
+        newSchedule[dayIndex] = { ...newSchedule[dayIndex], [field]: value as string };
+        // Auto-enable if times are filled
+        if (newSchedule[dayIndex].from_time && newSchedule[dayIndex].to_time) {
+          newSchedule[dayIndex].enabled = true;
+        }
+      }
+      return { ...prev, weekly_schedule: newSchedule };
+    });
   };
 
   const handleSave = async () => {
@@ -159,10 +269,44 @@ export const BatchManagementModal: React.FC<BatchManagementModalProps> = ({
       return;
     }
 
+    // Validate weekly schedule
+    const scheduleErrors: string[] = [];
+    editedBatch.weekly_schedule.forEach((daySchedule, index) => {
+      if (daySchedule.enabled) {
+        if (!daySchedule.from_time || !daySchedule.to_time) {
+          const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+          scheduleErrors.push(`${dayNames[index]}: Both from and to times are required`);
+        } else {
+          const fromTime = daySchedule.from_time.split(':').map(Number);
+          const toTime = daySchedule.to_time.split(':').map(Number);
+          const fromMinutes = fromTime[0] * 60 + fromTime[1];
+          const toMinutes = toTime[0] * 60 + toTime[1];
+          if (toMinutes <= fromMinutes) {
+            const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            scheduleErrors.push(`${dayNames[index]}: End time must be after start time`);
+          }
+        }
+      }
+    });
+
+    if (scheduleErrors.length > 0) {
+      setError('Schedule validation errors:\n' + scheduleErrors.join('\n'));
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
+      // Prepare weekly schedule - only include enabled days with valid times
+      const weeklySchedule: WeeklyScheduleEntry[] = editedBatch.weekly_schedule
+        .filter(daySchedule => daySchedule.enabled && daySchedule.from_time && daySchedule.to_time)
+        .map(daySchedule => ({
+          day: daySchedule.day,
+          from_time: daySchedule.from_time,
+          to_time: daySchedule.to_time
+        }));
+
       if (isCreating) {
         // Create new batch - teacher_id is optional
         const batchData: any = {
@@ -172,7 +316,8 @@ export const BatchManagementModal: React.FC<BatchManagementModalProps> = ({
           max_students: editedBatch.max_students,
           status: editedBatch.status,
           start_date: editedBatch.start_date,
-          end_date: editedBatch.end_date
+          end_date: editedBatch.end_date,
+          weekly_schedule: weeklySchedule.length > 0 ? weeklySchedule : undefined
         };
         
         // Only include teacher_id if it's provided
@@ -195,7 +340,8 @@ export const BatchManagementModal: React.FC<BatchManagementModalProps> = ({
           max_students: editedBatch.max_students,
           status: editedBatch.status,
           start_date: editedBatch.start_date,
-          end_date: editedBatch.end_date
+          end_date: editedBatch.end_date,
+          weekly_schedule: weeklySchedule.length > 0 ? weeklySchedule : null
         };
         
         // Include teacher_id if it's provided (even if empty string to clear it)
@@ -213,6 +359,12 @@ export const BatchManagementModal: React.FC<BatchManagementModalProps> = ({
 
       setIsEditing(false);
       setIsCreating(false);
+      
+      // Reload batch data to refresh schedule and upcoming classes
+      if (!isCreating && batch) {
+        await loadBatchData();
+      }
+      
       onBatchUpdated();
     } catch (error) {
       setError(`Failed to ${isCreating ? 'create' : 'update'} batch`);
@@ -375,6 +527,157 @@ export const BatchManagementModal: React.FC<BatchManagementModalProps> = ({
     setShowUpdateTopic(true);
   };
 
+  // Schedule exception handlers
+  const handleCancelClass = async (date: string, originalDay: string, notes?: string) => {
+    if (!batch) return;
+    
+    setLoading(true);
+    try {
+      const response = await AdminApi.createScheduleException({
+        batch_id: batch.id,
+        exception_date: date,
+        original_day: originalDay,
+        action: 'cancelled',
+        notes: notes || null
+      });
+
+      if (response.error) {
+        setError(response.error);
+        setLoading(false);
+        return;
+      }
+
+      // Reload exceptions and update upcoming classes
+      await loadBatchData();
+      setShowExceptionModal(false);
+      setExceptionAction(null);
+      setExceptionFormData({ newFromTime: '', newToTime: '', newDay: '', notes: '' });
+    } catch (error) {
+      setError('Failed to mark class as unavailable');
+      console.error('Error marking class as unavailable:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChangeTime = async (date: string, originalDay: string, newFromTime: string, newToTime: string, notes?: string) => {
+    if (!batch) return;
+    
+    setLoading(true);
+    try {
+      const response = await AdminApi.createScheduleException({
+        batch_id: batch.id,
+        exception_date: date,
+        original_day: originalDay,
+        action: 'time_changed',
+        from_time: newFromTime,
+        to_time: newToTime,
+        notes: notes || null
+      });
+
+      if (response.error) {
+        setError(response.error);
+        setLoading(false);
+        return;
+      }
+
+      await loadBatchData();
+      setShowExceptionModal(false);
+      setExceptionAction(null);
+      setExceptionFormData({ newFromTime: '', newToTime: '', newDay: '', notes: '' });
+    } catch (error) {
+      setError('Failed to change class time');
+      console.error('Error changing class time:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMoveClass = async (date: string, originalDay: string, newDay: string, newFromTime: string, newToTime: string, notes?: string) => {
+    if (!batch) return;
+    
+    setLoading(true);
+    try {
+      const response = await AdminApi.createScheduleException({
+        batch_id: batch.id,
+        exception_date: date,
+        original_day: originalDay,
+        action: 'moved',
+        new_day: newDay,
+        from_time: newFromTime || null,
+        to_time: newToTime || null,
+        notes: notes || null
+      });
+
+      if (response.error) {
+        setError(response.error);
+        setLoading(false);
+        return;
+      }
+
+      await loadBatchData();
+      setShowExceptionModal(false);
+      setExceptionAction(null);
+      setExceptionFormData({ newFromTime: '', newToTime: '', newDay: '', notes: '' });
+    } catch (error) {
+      setError('Failed to move class');
+      console.error('Error moving class:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteException = async (exceptionId: string) => {
+    if (!confirm('Are you sure you want to remove this schedule exception?')) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await AdminApi.deleteScheduleException(exceptionId);
+      if (response.error) {
+        setError(response.error);
+        setLoading(false);
+        return;
+      }
+
+      await loadBatchData();
+    } catch (error) {
+      setError('Failed to delete exception');
+      console.error('Error deleting exception:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openExceptionModal = (action: 'cancel' | 'change_time' | 'move', date: string, originalDay: string) => {
+    setExceptionAction(action);
+    setSelectedClassDate(date);
+    setSelectedOriginalDay(originalDay);
+    setExceptionFormData({ newFromTime: '', newToTime: '', newDay: '', notes: '' });
+    setShowExceptionModal(true);
+  };
+
+  const handleConfirmException = async () => {
+    if (!selectedClassDate || !selectedOriginalDay || !exceptionAction) return;
+
+    if (exceptionAction === 'cancel') {
+      await handleCancelClass(selectedClassDate, selectedOriginalDay, exceptionFormData.notes);
+    } else if (exceptionAction === 'change_time') {
+      if (!exceptionFormData.newFromTime || !exceptionFormData.newToTime) {
+        setError('Please provide both from and to times');
+        return;
+      }
+      await handleChangeTime(selectedClassDate, selectedOriginalDay, exceptionFormData.newFromTime, exceptionFormData.newToTime, exceptionFormData.notes);
+    } else if (exceptionAction === 'move') {
+      if (!exceptionFormData.newDay) {
+        setError('Please select a new day');
+        return;
+      }
+      await handleMoveClass(selectedClassDate, selectedOriginalDay, exceptionFormData.newDay, exceptionFormData.newFromTime, exceptionFormData.newToTime, exceptionFormData.notes);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -504,6 +807,56 @@ export const BatchManagementModal: React.FC<BatchManagementModalProps> = ({
                     </select>
                   </div>
                 </div>
+
+                {/* Weekly Schedule Section */}
+                <div className="mt-6">
+                  <label className="block text-sm font-medium text-[#0F1717] mb-3">
+                    Weekly Schedule (Optional)
+                  </label>
+                  <div className="bg-[#F7FCFA] border border-[#DBE5E0] rounded-lg p-4">
+                    <p className="text-xs text-[#5E8C7D] mb-4">
+                      Set recurring weekly class times. Only enabled days will be saved.
+                    </p>
+                    <div className="space-y-3">
+                      {editedBatch.weekly_schedule.map((daySchedule, index) => {
+                        const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                        return (
+                          <div key={daySchedule.day} className="flex items-center gap-3">
+                            <div className="w-24 flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={daySchedule.enabled}
+                                onChange={(e) => handleScheduleChange(index, 'enabled', e.target.checked)}
+                                className="w-4 h-4 text-[#009963] border-gray-300 rounded focus:ring-[#009963]"
+                              />
+                              <span className="text-sm font-medium text-[#0F1717]">
+                                {dayNames[index]}
+                              </span>
+                            </div>
+                            <div className="flex-1 grid grid-cols-2 gap-2">
+                              <input
+                                type="time"
+                                value={daySchedule.from_time}
+                                onChange={(e) => handleScheduleChange(index, 'from_time', e.target.value)}
+                                disabled={!daySchedule.enabled}
+                                className="px-2 py-1.5 text-sm border border-[#DBE5E0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E8C7D] disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                placeholder="From"
+                              />
+                              <input
+                                type="time"
+                                value={daySchedule.to_time}
+                                onChange={(e) => handleScheduleChange(index, 'to_time', e.target.value)}
+                                disabled={!daySchedule.enabled}
+                                className="px-2 py-1.5 text-sm border border-[#DBE5E0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E8C7D] disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                placeholder="To"
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="bg-[#F0F5F2] rounded-lg p-4">
@@ -536,6 +889,20 @@ export const BatchManagementModal: React.FC<BatchManagementModalProps> = ({
                     </span>
                   </div>
                 </div>
+
+                {/* Weekly Schedule Display */}
+                {batch && batch.weekly_schedule && batch.weekly_schedule.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-[#DBE5E0]">
+                    <h4 className="font-medium text-[#0F1717] mb-2">Regular Schedule</h4>
+                    <div className="space-y-1">
+                      {batch.weekly_schedule.map((entry, index) => (
+                        <div key={index} className="text-sm text-[#5E8C7D]">
+                          {getDayName(entry.day)}: {formatScheduleTime(entry.from_time)} - {formatScheduleTime(entry.to_time)}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -605,6 +972,128 @@ export const BatchManagementModal: React.FC<BatchManagementModalProps> = ({
                 <p className="text-gray-500 text-sm">No students enrolled in this batch.</p>
               )}
             </div>
+
+            {/* Manage Future Schedule */}
+            {batch && batch.weekly_schedule && batch.weekly_schedule.length > 0 && !isCreating && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-[#0F1717] mb-4">Manage Future Schedule</h3>
+                <div className="bg-[#F7FCFA] border border-[#DBE5E0] rounded-lg p-4">
+                  <p className="text-xs text-[#5E8C7D] mb-4">
+                    Manage classes for the next week. Mark as unavailable, change time, or move to a different day.
+                  </p>
+                  
+                  {/* Upcoming Classes List */}
+                  {upcomingClasses.length > 0 ? (
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {upcomingClasses.map((classItem, index) => {
+                        const classDate = classItem.date.toISOString().split('T')[0];
+                        const exception = scheduleExceptions.find(ex => ex.exception_date === classDate);
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const isPast = classItem.date < today;
+                        
+                        if (isPast) return null;
+
+                        return (
+                          <div key={index} className="bg-white border border-[#DBE5E0] rounded-lg p-3">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="font-medium text-[#0F1717]">
+                                    {getDayName(classItem.day)}, {classItem.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                  </span>
+                                  {exception && (
+                                    <span className={`text-xs px-2 py-0.5 rounded ${
+                                      exception.action === 'cancelled' ? 'bg-red-100 text-red-700' :
+                                      exception.action === 'time_changed' ? 'bg-yellow-100 text-yellow-700' :
+                                      'bg-blue-100 text-blue-700'
+                                    }`}>
+                                    {exception.action === 'cancelled' ? 'Unavailable' :
+                                     exception.action === 'time_changed' ? 'Time Changed' : 'Moved'}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-sm text-[#5E8C7D]">
+                                  {exception && exception.action === 'cancelled' ? (
+                                    <span className="line-through">
+                                      {formatScheduleTime(classItem.from_time)} - {formatScheduleTime(classItem.to_time)}
+                                    </span>
+                                  ) : exception && exception.action === 'time_changed' ? (
+                                    <span>
+                                      {formatScheduleTime(exception.from_time || classItem.from_time)} - {formatScheduleTime(exception.to_time || classItem.to_time)}
+                                      <span className="text-xs text-gray-500 ml-2">
+                                        (was {formatScheduleTime(classItem.from_time)} - {formatScheduleTime(classItem.to_time)})
+                                      </span>
+                                    </span>
+                                  ) : exception && exception.action === 'moved' ? (
+                                    <span>
+                                      {getDayName(exception.new_day || classItem.day)}: {formatScheduleTime(exception.from_time || classItem.from_time)} - {formatScheduleTime(exception.to_time || classItem.to_time)}
+                                    </span>
+                                  ) : (
+                                    <span>{formatScheduleTime(classItem.from_time)} - {formatScheduleTime(classItem.to_time)}</span>
+                                  )}
+                                </div>
+                                {exception && exception.notes && (
+                                  <p className="text-xs text-gray-600 mt-1 italic">{exception.notes}</p>
+                                )}
+                              </div>
+                              <div className="flex gap-2">
+                                {!exception ? (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        openExceptionModal('cancel', classDate, classItem.day);
+                                      }}
+                                      className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors cursor-pointer"
+                                    >
+                                      Mark Unavailable
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        openExceptionModal('change_time', classDate, classItem.day);
+                                      }}
+                                      className="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200 transition-colors cursor-pointer"
+                                    >
+                                      Change Time
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        openExceptionModal('move', classDate, classItem.day);
+                                      }}
+                                      className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors cursor-pointer"
+                                    >
+                                      Move
+                                    </button>
+                                  </>
+                                ) : (
+                                  <button
+                                    onClick={() => handleDeleteException(exception.id)}
+                                    className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                                  >
+                                    Remove
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-sm">No upcoming classes scheduled.</p>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Topics Management */}
             {batch && (
@@ -759,6 +1248,163 @@ export const BatchManagementModal: React.FC<BatchManagementModalProps> = ({
             setSelectedTopic(null);
           }}
         />
+      )}
+
+      {/* Schedule Exception Modal */}
+      {showExceptionModal && exceptionAction && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-xl font-bold text-[#0F1717] mb-4">
+              {exceptionAction === 'cancel' ? 'Mark Class as Unavailable' :
+               exceptionAction === 'change_time' ? 'Change Class Time' : 'Move Class'}
+            </h3>
+            
+            {exceptionAction === 'cancel' && (
+              <div>
+                <p className="text-sm text-gray-600 mb-4">
+                  Mark this class as unavailable? Students will be notified that this class is not happening.
+                </p>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-[#0F1717] mb-2">
+                    Notes (optional)
+                  </label>
+                  <textarea
+                    value={exceptionFormData.notes}
+                    onChange={(e) => setExceptionFormData(prev => ({ ...prev, notes: e.target.value }))}
+                    className="w-full px-3 py-2 border border-[#DBE5E0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E8C7D]"
+                    rows={3}
+                    placeholder="Reason for unavailability (this will be visible to students)..."
+                  />
+                </div>
+              </div>
+            )}
+
+            {exceptionAction === 'change_time' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-[#0F1717] mb-2">
+                      New From Time *
+                    </label>
+                    <input
+                      type="time"
+                      value={exceptionFormData.newFromTime}
+                      onChange={(e) => setExceptionFormData(prev => ({ ...prev, newFromTime: e.target.value }))}
+                      className="w-full px-3 py-2 border border-[#DBE5E0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E8C7D]"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#0F1717] mb-2">
+                      New To Time *
+                    </label>
+                    <input
+                      type="time"
+                      value={exceptionFormData.newToTime}
+                      onChange={(e) => setExceptionFormData(prev => ({ ...prev, newToTime: e.target.value }))}
+                      className="w-full px-3 py-2 border border-[#DBE5E0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E8C7D]"
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#0F1717] mb-2">
+                    Notes (optional)
+                  </label>
+                  <textarea
+                    value={exceptionFormData.notes}
+                    onChange={(e) => setExceptionFormData(prev => ({ ...prev, notes: e.target.value }))}
+                    className="w-full px-3 py-2 border border-[#DBE5E0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E8C7D]"
+                    rows={3}
+                    placeholder="Reason for time change..."
+                  />
+                </div>
+              </div>
+            )}
+
+            {exceptionAction === 'move' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#0F1717] mb-2">
+                    New Day *
+                  </label>
+                  <select
+                    value={exceptionFormData.newDay}
+                    onChange={(e) => setExceptionFormData(prev => ({ ...prev, newDay: e.target.value }))}
+                    className="w-full px-3 py-2 border border-[#DBE5E0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E8C7D]"
+                    required
+                  >
+                    <option value="">Select a day</option>
+                    <option value="monday">Monday</option>
+                    <option value="tuesday">Tuesday</option>
+                    <option value="wednesday">Wednesday</option>
+                    <option value="thursday">Thursday</option>
+                    <option value="friday">Friday</option>
+                    <option value="saturday">Saturday</option>
+                    <option value="sunday">Sunday</option>
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-[#0F1717] mb-2">
+                      New From Time (optional)
+                    </label>
+                    <input
+                      type="time"
+                      value={exceptionFormData.newFromTime}
+                      onChange={(e) => setExceptionFormData(prev => ({ ...prev, newFromTime: e.target.value }))}
+                      className="w-full px-3 py-2 border border-[#DBE5E0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E8C7D]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#0F1717] mb-2">
+                      New To Time (optional)
+                    </label>
+                    <input
+                      type="time"
+                      value={exceptionFormData.newToTime}
+                      onChange={(e) => setExceptionFormData(prev => ({ ...prev, newToTime: e.target.value }))}
+                      className="w-full px-3 py-2 border border-[#DBE5E0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E8C7D]"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#0F1717] mb-2">
+                    Notes (optional)
+                  </label>
+                  <textarea
+                    value={exceptionFormData.notes}
+                    onChange={(e) => setExceptionFormData(prev => ({ ...prev, notes: e.target.value }))}
+                    className="w-full px-3 py-2 border border-[#DBE5E0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E8C7D]"
+                    rows={3}
+                    placeholder="Reason for moving class..."
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-3 justify-end mt-6">
+              <button
+                onClick={() => {
+                  setShowExceptionModal(false);
+                  setExceptionAction(null);
+                  setExceptionFormData({ newFromTime: '', newToTime: '', newDay: '', notes: '' });
+                }}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmException}
+                disabled={loading || (exceptionAction === 'change_time' && (!exceptionFormData.newFromTime || !exceptionFormData.newToTime)) || (exceptionAction === 'move' && !exceptionFormData.newDay)}
+                className="px-4 py-2 bg-[#5E8C7D] text-white rounded-lg hover:bg-[#4a6b5d] transition-colors disabled:opacity-50"
+              >
+                {loading ? 'Saving...' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

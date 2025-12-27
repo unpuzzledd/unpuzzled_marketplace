@@ -12,6 +12,7 @@ interface ProfileCompletionProps {
     school_name?: string;
     location?: string;
     teacher_skills?: string[];
+    highest_education?: string;
   }) => Promise<{ success: boolean; error?: string }>
   onSuccess: (role: string) => void
 }
@@ -22,7 +23,8 @@ export const ProfileCompletion = ({ user, onSubmit, onSuccess }: ProfileCompleti
     phone_number: user.phone_number || '',
     date_of_birth: user.date_of_birth || '',
     school_name: user.school_name || '',
-    location: user.location || ''
+    location: user.location || '',
+    highest_education: user.highest_education || ''
   })
   const [selectedSkills, setSelectedSkills] = useState<string[]>(user.teacher_skills || [])
   const [skills, setSkills] = useState<Skill[]>([])
@@ -118,6 +120,16 @@ export const ProfileCompletion = ({ user, onSubmit, onSuccess }: ProfileCompleti
           newErrors.phone_number = 'Please enter a valid phone number (at least 10 digits)'
         }
       }
+
+      // Skills are required for teachers
+      if (selectedSkills.length === 0) {
+        newErrors.teacher_skills = 'Please select at least one skill you can teach'
+      }
+
+      // Highest education is required for teachers
+      if (!formData.highest_education.trim()) {
+        newErrors.highest_education = 'Highest education is required'
+      }
     }
 
     setErrors(newErrors)
@@ -140,7 +152,8 @@ export const ProfileCompletion = ({ user, onSubmit, onSuccess }: ProfileCompleti
         date_of_birth: isStudent ? formData.date_of_birth : undefined,
         school_name: isStudent && formData.school_name.trim() ? formData.school_name.trim() : undefined,
         location: isStudent && formData.location.trim() ? formData.location.trim() : undefined,
-        teacher_skills: isTeacher ? selectedSkills : undefined
+        teacher_skills: isTeacher ? selectedSkills : undefined,
+        highest_education: isTeacher ? formData.highest_education.trim() : undefined
       }
       
       console.log('Submitting profile data:', submitData)
@@ -279,19 +292,51 @@ export const ProfileCompletion = ({ user, onSubmit, onSuccess }: ProfileCompleti
                 )}
               </div>
 
-              {/* Skills Selection - Optional for teachers */}
+              {/* Highest Education - Required for teachers */}
+              <div>
+                <label htmlFor="highest_education" className="block text-sm font-medium text-gray-700 mb-1">
+                  Highest Education <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="highest_education"
+                  value={formData.highest_education}
+                  onChange={(e) => setFormData({ ...formData, highest_education: e.target.value })}
+                  className={`w-full px-3 py-2 sm:px-4 sm:py-2.5 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    errors.highest_education ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  disabled={isSubmitting}
+                >
+                  <option value="">Select your highest education</option>
+                  <option value="High School">High School</option>
+                  <option value="Diploma">Diploma</option>
+                  <option value="Bachelor's Degree">Bachelor's Degree</option>
+                  <option value="Master's Degree">Master's Degree</option>
+                  <option value="PhD">PhD</option>
+                  <option value="Professional Certification">Professional Certification</option>
+                  <option value="Other">Other</option>
+                </select>
+                {errors.highest_education && (
+                  <p className="mt-1 text-sm text-red-600">{errors.highest_education}</p>
+                )}
+              </div>
+
+              {/* Skills Selection - Required for teachers */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Skills You Can Teach <span className="text-gray-500 text-xs">(Optional)</span>
+                  Skills You Can Teach <span className="text-red-500">*</span>
                 </label>
                 <div className="relative" ref={skillsDropdownRef}>
                   <button
                     type="button"
                     onClick={() => setShowSkillsDropdown(!showSkillsDropdown)}
                     disabled={isSubmitting || skillsLoading}
-                    className="w-full px-3 py-2 sm:px-4 sm:py-2.5 border border-gray-300 rounded-md bg-white text-left focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between"
+                    className={`w-full px-3 py-2 sm:px-4 sm:py-2.5 border rounded-md bg-white text-left focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between ${
+                      errors.teacher_skills ? 'border-red-500' : 'border-gray-300'
+                    }`}
                   >
-                    <span className="text-gray-700">
+                    <span className={`${
+                      errors.teacher_skills ? 'text-red-600' : 'text-gray-700'
+                    }`}>
                       {selectedSkills.length === 0 
                         ? 'Select skills you can teach' 
                         : selectedSkills.length === 1
@@ -360,6 +405,9 @@ export const ProfileCompletion = ({ user, onSubmit, onSuccess }: ProfileCompleti
                       ) : null
                     })}
                   </div>
+                )}
+                {errors.teacher_skills && (
+                  <p className="mt-1 text-sm text-red-600">{errors.teacher_skills}</p>
                 )}
               </div>
             </>

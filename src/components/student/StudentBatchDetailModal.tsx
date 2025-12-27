@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { StudentApi } from '../../lib/studentApi'
+import { ViewTopic } from '../../pages/ViewTopic'
 
 interface StudentBatchDetailModalProps {
   isOpen: boolean
@@ -23,6 +24,9 @@ export const StudentBatchDetailModal = ({
   const [score, setScore] = useState<any>(null)
   const [rank, setRank] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [showViewTopic, setShowViewTopic] = useState(false)
+  const [selectedTopic, setSelectedTopic] = useState<any>(null)
+  const [mergedSchedule, setMergedSchedule] = useState<any[]>([])
 
   useEffect(() => {
     const fetchBatchData = async () => {
@@ -30,17 +34,31 @@ export const StudentBatchDetailModal = ({
 
       setLoading(true)
       try {
-        const [detailsRes, topicsRes, scoreRes, rankRes] = await Promise.all([
+        const [detailsRes, topicsRes, scoreRes, rankRes, exceptionsRes] = await Promise.all([
           StudentApi.getBatchDetails(batch.id, studentId),
           StudentApi.getBatchTopics(batch.id),
           StudentApi.getBatchScore(studentId, batch.id),
-          StudentApi.getMyRankInBatch(studentId, batch.id)
+          StudentApi.getMyRankInBatch(studentId, batch.id),
+          AdminApi.getBatchScheduleExceptions(batch.id)
         ])
 
         if (detailsRes.data) setBatchDetails(detailsRes.data)
         if (topicsRes.data) setTopics(topicsRes.data)
         if (scoreRes.data) setScore(scoreRes.data)
         if (rankRes.data) setRank(rankRes.data)
+
+        // Merge schedule with exceptions
+        if (batch.weekly_schedule && batch.weekly_schedule.length > 0 && batch.start_date && batch.end_date) {
+          const merged = mergeScheduleWithExceptions(
+            batch.weekly_schedule,
+            exceptionsRes.data || [],
+            batch.start_date,
+            batch.end_date
+          )
+          setMergedSchedule(merged)
+        } else {
+          setMergedSchedule([])
+        }
       } catch (error) {
         console.error('Error fetching batch data:', error)
       } finally {
@@ -64,6 +82,11 @@ export const StudentBatchDetailModal = ({
 
   const isPastDue = (dateString: string) => {
     return new Date(dateString) < new Date()
+  }
+
+  const handleViewTopic = (topic: any) => {
+    setSelectedTopic(topic)
+    setShowViewTopic(true)
   }
 
   return (
@@ -282,6 +305,7 @@ export const StudentBatchDetailModal = ({
                               </div>
                             </div>
                             <button
+                              onClick={() => handleViewTopic(topic)}
                               className="ml-4 px-4 py-2 bg-[#009963] text-white rounded-lg hover:bg-[#007a4f] transition-colors text-sm font-medium"
                             >
                               View
@@ -398,6 +422,18 @@ export const StudentBatchDetailModal = ({
           </div>
         </div>
       </div>
+
+      {/* View Topic Modal */}
+      {showViewTopic && selectedTopic && (
+        <ViewTopic
+          isOpen={showViewTopic}
+          onClose={() => {
+            setShowViewTopic(false)
+            setSelectedTopic(null)
+          }}
+          topic={selectedTopic}
+        />
+      )}
     </div>
   )
 }

@@ -9,6 +9,7 @@ interface StudentManagementModalProps {
     student_id: string;
     academy_id: string;
     status: string;
+    notes?: string | null;
     student: {
       id: string;
       full_name: string;
@@ -35,6 +36,9 @@ export const StudentManagementModal: React.FC<StudentManagementModalProps> = ({
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [approvalAction, setApprovalAction] = useState<'approve' | 'reject' | null>(null);
+  const [approvalNotes, setApprovalNotes] = useState('');
   const [studentBatches, setStudentBatches] = useState<any[]>([]);
   const [availableBatches, setAvailableBatches] = useState<any[]>([]);
   const [selectedBatch, setSelectedBatch] = useState('');
@@ -128,51 +132,59 @@ export const StudentManagementModal: React.FC<StudentManagementModalProps> = ({
     }
   };
 
-  const handleApproveStudent = async () => {
+  const handleApproveClick = () => {
+    setApprovalAction('approve');
+    setApprovalNotes('');
+    setShowApprovalModal(true);
+  };
+
+  const handleRejectClick = () => {
+    setApprovalAction('reject');
+    setApprovalNotes('');
+    setShowApprovalModal(true);
+  };
+
+  const handleConfirmApproval = async () => {
+    if (!approvalAction) return;
+
     setLoading(true);
     setError(null);
 
     try {
-      const { error } = await AdminApi.updateStudentEnrollmentStatus(student.id, 'approved');
+      const status = approvalAction === 'approve' ? 'approved' : 'rejected';
+      const { error } = await AdminApi.updateStudentEnrollmentStatus(
+        student.id, 
+        status,
+        approvalNotes.trim() || null
+      );
       
       if (error) {
         setError(error);
+        setLoading(false);
         return;
       }
 
+      setShowApprovalModal(false);
+      setApprovalAction(null);
+      setApprovalNotes('');
+      
+      if (approvalAction === 'reject') {
+        onClose();
+      }
+      
       onStudentUpdated();
     } catch (error) {
-      setError('Failed to approve student');
-      console.error('Error approving student:', error);
+      setError(`Failed to ${approvalAction} student`);
+      console.error(`Error ${approvalAction}ing student:`, error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRejectStudent = async () => {
-    if (!confirm('Are you sure you want to reject this student?')) {
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const { error } = await AdminApi.updateStudentEnrollmentStatus(student.id, 'rejected');
-      
-      if (error) {
-        setError(error);
-        return;
-      }
-
-      onStudentUpdated();
-      onClose();
-    } catch (error) {
-      setError('Failed to reject student');
-      console.error('Error rejecting student:', error);
-    } finally {
-      setLoading(false);
-    }
+  const handleCancelApproval = () => {
+    setShowApprovalModal(false);
+    setApprovalAction(null);
+    setApprovalNotes('');
   };
 
   const handleAssignToBatch = async () => {
@@ -332,25 +344,48 @@ export const StudentManagementModal: React.FC<StudentManagementModalProps> = ({
             )}
 
             {/* Approval Actions */}
-            {student.status === 'pending' && (
-              <div className="mt-4 space-y-2">
-                <h4 className="font-medium text-[#0F1717]">Enrollment Actions</h4>
+            {(student.status === 'pending' || student.status === 'rejected') && (
+              <div className={`mt-4 space-y-2 p-4 rounded-lg ${
+                student.status === 'pending' 
+                  ? 'bg-yellow-50 border border-yellow-200' 
+                  : 'bg-red-50 border border-red-200'
+              }`}>
+                <h4 className="font-medium text-[#0F1717]">
+                  {student.status === 'pending' 
+                    ? 'Enrollment Actions' 
+                    : 'Re-enrollment Actions'}
+                </h4>
+                <p className="text-xs text-[#5E8C7D] mb-3">
+                  {student.status === 'pending'
+                    ? 'Review and approve or reject this student\'s enrollment request.'
+                    : 'This student was previously rejected. You can approve them now if you change your mind.'}
+                </p>
                 <div className="flex gap-2">
                   <button
-                    onClick={handleApproveStudent}
+                    onClick={handleApproveClick}
                     disabled={loading}
                     className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
                   >
-                    Approve Student
+                    {student.status === 'rejected' ? 'Approve Now' : 'Approve Student'}
                   </button>
-                  <button
-                    onClick={handleRejectStudent}
-                    disabled={loading}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-                  >
-                    Reject Student
-                  </button>
+                  {student.status === 'pending' && (
+                    <button
+                      onClick={handleRejectClick}
+                      disabled={loading}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                    >
+                      Reject Student
+                    </button>
+                  )}
                 </div>
+              </div>
+            )}
+
+            {/* Show notes if enrollment has been processed */}
+            {student.status !== 'pending' && (student as any).notes && (
+              <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                <h4 className="font-medium text-[#0F1717] mb-1">Academy Notes:</h4>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">{(student as any).notes}</p>
               </div>
             )}
 
@@ -527,6 +562,83 @@ export const StudentManagementModal: React.FC<StudentManagementModalProps> = ({
           )}
         </div>
       </div>
+
+      {/* Approval Modal */}
+      {showApprovalModal && approvalAction && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            {/* Background overlay */}
+            <div
+              className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"
+              onClick={handleCancelApproval}
+            ></div>
+
+            {/* Modal panel */}
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+              {/* Header */}
+              <div className="bg-white px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-medium text-gray-900">
+                  {approvalAction === 'approve' ? 'Approve Student' : 'Reject Student'}
+                </h3>
+              </div>
+
+              {/* Content */}
+              <div className="bg-white px-6 py-4">
+                <p className="text-sm text-gray-600 mb-4">
+                  {approvalAction === 'approve' 
+                    ? 'Are you sure you want to approve this student enrollment? You can add optional notes below.'
+                    : 'Are you sure you want to reject this student enrollment? Please provide a reason (optional but recommended).'}
+                </p>
+                
+                <div className="mb-4">
+                  <label htmlFor="approval-notes" className="block text-sm font-medium text-gray-700 mb-1">
+                    Notes {approvalAction === 'reject' && <span className="text-gray-500">(Optional but recommended)</span>}
+                  </label>
+                  <textarea
+                    id="approval-notes"
+                    value={approvalNotes}
+                    onChange={(e) => setApprovalNotes(e.target.value)}
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder={approvalAction === 'approve' 
+                      ? 'Add welcome message or instructions for the student...'
+                      : 'Provide reason for rejection (this will be visible to the student)...'}
+                    disabled={loading}
+                  />
+                </div>
+
+                {error && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-800 text-sm">
+                    {error}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3">
+                <button
+                  onClick={handleCancelApproval}
+                  disabled={loading}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmApproval}
+                  disabled={loading}
+                  className={`px-4 py-2 text-sm font-medium text-white rounded-md transition-colors disabled:opacity-50 ${
+                    approvalAction === 'approve'
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : 'bg-red-600 hover:bg-red-700'
+                  }`}
+                >
+                  {loading ? 'Processing...' : approvalAction === 'approve' ? 'Approve' : 'Reject'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

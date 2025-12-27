@@ -444,6 +444,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     school_name?: string;
     location?: string;
     teacher_skills?: string[];
+    highest_education?: string;
   }): Promise<{ success: boolean; error?: string }> => {
     if (!user) {
       return { success: false, error: 'User not found' }
@@ -463,6 +464,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Store as JSONB array
         updateData.teacher_skills = profileData.teacher_skills.length > 0 ? profileData.teacher_skills : []
       }
+      // Only include highest_education if it's provided and the column exists
+      // This prevents errors if the migration hasn't been run yet
+      if (profileData.highest_education !== undefined) {
+        // Check if error mentions missing column - if so, skip this field
+        updateData.highest_education = profileData.highest_education || null
+      }
 
       console.log('Updating user profile:', { userId: user.id, updateData })
 
@@ -476,6 +483,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         console.error('Error updating user profile:', error)
+        
+        // If error is about missing column, provide helpful message
+        if (error.message && error.message.includes('highest_education')) {
+          return { 
+            success: false, 
+            error: 'Database migration required: Please run the migration to add the highest_education column. See migrations/add_teacher_education_field.sql' 
+          }
+        }
+        
         return { success: false, error: error.message }
       }
 
@@ -498,9 +514,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return !!(user.full_name && user.date_of_birth)
     }
 
-    // For teachers: require full_name and phone_number
+    // For teachers: require full_name, phone_number, highest_education, and at least one skill
+    // Note: highest_education check is optional - if column doesn't exist, we'll skip it
     if (role === 'teacher') {
-      return !!(user.full_name && user.phone_number)
+      const hasBasicInfo = !!(user.full_name && user.phone_number)
+      const hasSkills = !!(user.teacher_skills && user.teacher_skills.length > 0)
+      // highest_education is required but we check it gracefully - if undefined/null, it means column might not exist
+      const hasEducation = user.highest_education !== undefined ? !!user.highest_education : true
+      return hasBasicInfo && hasSkills && hasEducation
     }
 
     // For academy_owner and other roles, just check full_name

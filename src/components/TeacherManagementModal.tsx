@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AdminApi } from '../lib/adminApi';
+import { supabase } from '../lib/supabase';
 
 interface TeacherManagementModalProps {
   isOpen: boolean;
@@ -13,6 +14,11 @@ interface TeacherManagementModalProps {
       id: string;
       full_name: string;
       email: string;
+      phone_number?: string | null;
+      highest_education?: string | null;
+      location?: string | null;
+      teacher_skills?: string[] | null;
+      [key: string]: any; // Allow additional properties from API
     } | null;
   };
   onTeacherUpdated: () => void;
@@ -36,6 +42,7 @@ export const TeacherManagementModal: React.FC<TeacherManagementModalProps> = ({
   const [allBatches, setAllBatches] = useState<any[]>([]);
   const [selectedBatchIds, setSelectedBatchIds] = useState<string[]>([]);
   const [isAssigningBatches, setIsAssigningBatches] = useState(false);
+  const [teacherSkills, setTeacherSkills] = useState<any[]>([]);
 
   useEffect(() => {
     if (isOpen && teacher.teacher) {
@@ -45,8 +52,34 @@ export const TeacherManagementModal: React.FC<TeacherManagementModalProps> = ({
       });
       loadTeacherBatches();
       loadAllBatches();
+      loadTeacherSkills();
     }
   }, [isOpen, teacher]);
+
+  const loadTeacherSkills = async () => {
+    if (!teacher.teacher?.teacher_skills || teacher.teacher.teacher_skills.length === 0) {
+      setTeacherSkills([]);
+      return;
+    }
+
+    try {
+      const { data: skills, error } = await supabase
+        .from('skills')
+        .select('id, name')
+        .in('id', teacher.teacher.teacher_skills);
+
+      if (error) {
+        console.error('Error loading teacher skills:', error);
+        setTeacherSkills([]);
+        return;
+      }
+
+      setTeacherSkills(skills || []);
+    } catch (error) {
+      console.error('Error loading teacher skills:', error);
+      setTeacherSkills([]);
+    }
+  };
 
   const loadTeacherBatches = async () => {
     try {
@@ -139,7 +172,11 @@ export const TeacherManagementModal: React.FC<TeacherManagementModalProps> = ({
   };
 
   const handleRejectTeacher = async () => {
-    if (!confirm('Are you sure you want to reject this teacher request?')) {
+    const confirmMessage = teacher.status === 'approved' 
+      ? 'Are you sure you want to suspend this teacher? They will no longer be able to access academy resources.'
+      : 'Are you sure you want to reject this teacher request?';
+    
+    if (!confirm(confirmMessage)) {
       return;
     }
 
@@ -147,6 +184,8 @@ export const TeacherManagementModal: React.FC<TeacherManagementModalProps> = ({
     setError(null);
 
     try {
+      // If teacher is approved, we suspend them (set status to rejected)
+      // If teacher is pending, we reject them
       const { error } = await AdminApi.rejectTeacherAssignment(teacher.id);
       
       if (error) {
@@ -156,8 +195,8 @@ export const TeacherManagementModal: React.FC<TeacherManagementModalProps> = ({
 
       onTeacherUpdated();
     } catch (error) {
-      setError('Failed to reject teacher');
-      console.error('Error rejecting teacher:', error);
+      setError(teacher.status === 'approved' ? 'Failed to suspend teacher' : 'Failed to reject teacher');
+      console.error('Error rejecting/suspending teacher:', error);
     } finally {
       setLoading(false);
     }
@@ -297,37 +336,95 @@ export const TeacherManagementModal: React.FC<TeacherManagementModalProps> = ({
             </div>
           ) : (
             <div className="bg-[#F0F5F2] rounded-lg p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-12 h-12 bg-[#5E8C7D] rounded-full flex items-center justify-center">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-[#5E8C7D] rounded-full flex items-center justify-center flex-shrink-0">
                   <span className="text-white font-bold text-lg">
                     {teacher.teacher.full_name.charAt(0).toUpperCase()}
                   </span>
                 </div>
-                <div>
+                <div className="flex-1">
                   <h4 className="font-bold text-[#0F1717]">{teacher.teacher.full_name}</h4>
                   <p className="text-sm text-[#5E8C7D]">{teacher.teacher.email}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-[#0F1717]">Status:</span>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  teacher.status === 'approved' 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-yellow-100 text-yellow-800'
-                }`}>
-                  {teacher.status}
-                </span>
+              
+              <div className="space-y-2 border-t border-[#DBE5E0] pt-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-[#0F1717]">Status:</span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    teacher.status === 'approved' 
+                      ? 'bg-green-100 text-green-800' 
+                      : teacher.status === 'rejected'
+                      ? 'bg-red-100 text-red-800'
+                      : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {teacher.status}
+                  </span>
+                </div>
+
+                {teacher.teacher.phone_number && (
+                  <div className="text-sm text-[#0F1717]">
+                    <span className="font-medium">Phone:</span>{' '}
+                    <span className="text-[#5E8C7D]">{teacher.teacher.phone_number}</span>
+                  </div>
+                )}
+
+                {teacher.teacher.highest_education && (
+                  <div className="text-sm text-[#0F1717]">
+                    <span className="font-medium">Highest Education:</span>{' '}
+                    <span className="text-[#5E8C7D]">{teacher.teacher.highest_education}</span>
+                  </div>
+                )}
+
+                {teacher.teacher.location && (
+                  <div className="text-sm text-[#0F1717]">
+                    <span className="font-medium">Location:</span>{' '}
+                    <span className="text-[#5E8C7D]">{teacher.teacher.location}</span>
+                  </div>
+                )}
+
+                {teacherSkills.length > 0 && (
+                  <div className="text-sm text-[#0F1717]">
+                    <span className="font-medium">Skills:</span>{' '}
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {teacherSkills.map((skill) => (
+                        <span
+                          key={skill.id}
+                          className="px-2 py-1 bg-[#009963] text-white rounded-full text-xs font-medium"
+                        >
+                          {skill.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {teacherSkills.length === 0 && teacher.teacher.teacher_skills && teacher.teacher.teacher_skills.length > 0 && (
+                  <div className="text-sm text-[#5E8C7D] italic">
+                    Skills loading...
+                  </div>
+                )}
               </div>
             </div>
           )}
         </div>
 
-        {/* Approval Section - Show if pending */}
-        {teacher.status === 'pending' && (
-          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <h3 className="text-lg font-semibold text-[#0F1717] mb-2">Teacher Request Pending Approval</h3>
+        {/* Approval Section - Show if pending or rejected */}
+        {(teacher.status === 'pending' || teacher.status === 'rejected') && (
+          <div className={`mb-6 p-4 border rounded-lg ${
+            teacher.status === 'pending' 
+              ? 'bg-yellow-50 border-yellow-200' 
+              : 'bg-red-50 border-red-200'
+          }`}>
+            <h3 className="text-lg font-semibold text-[#0F1717] mb-2">
+              {teacher.status === 'pending' 
+                ? 'Teacher Request Pending Approval' 
+                : 'Teacher Request Rejected'}
+            </h3>
             <p className="text-sm text-[#5E8C7D] mb-4">
-              This teacher has requested to join your academy. Please review and approve or reject their request.
+              {teacher.status === 'pending'
+                ? 'This teacher has requested to join your academy. Please review and approve or reject their request.'
+                : 'This teacher was previously rejected. You can now approve them if you change your mind.'}
             </p>
             <div className="flex gap-3">
               <button
@@ -335,15 +432,17 @@ export const TeacherManagementModal: React.FC<TeacherManagementModalProps> = ({
                 disabled={loading}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
               >
-                {loading ? 'Approving...' : 'Approve'}
+                {loading ? 'Approving...' : teacher.status === 'rejected' ? 'Approve Now' : 'Approve'}
               </button>
-              <button
-                onClick={handleRejectTeacher}
-                disabled={loading}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-              >
-                {loading ? 'Rejecting...' : 'Reject'}
-              </button>
+              {teacher.status === 'pending' && (
+                <button
+                  onClick={handleRejectTeacher}
+                  disabled={loading}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                >
+                  {loading ? 'Rejecting...' : 'Reject'}
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -507,21 +606,28 @@ export const TeacherManagementModal: React.FC<TeacherManagementModalProps> = ({
           ) : (
             <>
               {teacher.status === 'approved' && (
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="px-4 py-2 bg-[#5E8C7D] text-white rounded-lg hover:bg-[#4a6b5d] transition-colors"
-                >
-                  Edit Information
-                </button>
-              )}
-              {teacher.status === 'approved' && (
-                <button
-                  onClick={handleRemoveTeacher}
-                  disabled={loading}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-                >
-                  {loading ? 'Removing...' : 'Remove Teacher'}
-                </button>
+                <>
+                  <button
+                    onClick={handleRejectTeacher}
+                    disabled={loading}
+                    className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors disabled:opacity-50"
+                  >
+                    {loading ? 'Suspending...' : 'Suspend Teacher'}
+                  </button>
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="px-4 py-2 bg-[#5E8C7D] text-white rounded-lg hover:bg-[#4a6b5d] transition-colors"
+                  >
+                    Edit Information
+                  </button>
+                  <button
+                    onClick={handleRemoveTeacher}
+                    disabled={loading}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                  >
+                    {loading ? 'Removing...' : 'Remove Teacher'}
+                  </button>
+                </>
               )}
               <button
                 onClick={onClose}

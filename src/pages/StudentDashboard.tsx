@@ -4,6 +4,7 @@ import { BellIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '../hooks/useAuth'
 import { StudentApi } from '../lib/studentApi'
 import { StudentBatchDetailModal } from '../components/student/StudentBatchDetailModal'
+import { ViewTopic } from './ViewTopic'
 
 const StudentDashboard = () => {
   const { user, loading, signOut } = useAuth()
@@ -20,6 +21,8 @@ const StudentDashboard = () => {
   const [statistics, setStatistics] = useState<any>(null)
   const [dataLoading, setDataLoading] = useState(true)
   const [selectedBatch, setSelectedBatch] = useState<any>(null)
+  const [showViewTopic, setShowViewTopic] = useState(false)
+  const [selectedTopic, setSelectedTopic] = useState<any>(null)
 
   const navItems = [
     {
@@ -118,6 +121,11 @@ const StudentDashboard = () => {
 
   const handleCloseBatchModal = () => {
     setSelectedBatch(null)
+  }
+
+  const handleViewTopic = (activity: any) => {
+    setSelectedTopic(activity)
+    setShowViewTopic(true)
   }
 
   // Format date for display
@@ -389,6 +397,7 @@ const StudentDashboard = () => {
                           </div>
                           
                           <button
+                            onClick={() => handleViewTopic(activity)}
                             className="flex-shrink-0 hover:opacity-70 transition-opacity"
                             title="View topic"
                           >
@@ -534,6 +543,18 @@ const StudentDashboard = () => {
           onClose={handleCloseBatchModal}
           batch={selectedBatch}
           studentId={user?.id || ''}
+        />
+      )}
+
+      {/* View Topic Modal */}
+      {showViewTopic && selectedTopic && (
+        <ViewTopic
+          isOpen={showViewTopic}
+          onClose={() => {
+            setShowViewTopic(false)
+            setSelectedTopic(null)
+          }}
+          topic={selectedTopic}
         />
       )}
     </div>

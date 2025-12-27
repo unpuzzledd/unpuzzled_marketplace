@@ -25,6 +25,7 @@ export const StudentAcademyDetailModal: React.FC<StudentAcademyDetailModalProps>
   const [enrollmentStatuses, setEnrollmentStatuses] = useState<Record<string, string>>({})
   const [assignmentStatus, setAssignmentStatus] = useState<string | null>(null)
   const [academyEnrollmentStatus, setAcademyEnrollmentStatus] = useState<string | null>(null)
+  const [academyEnrollmentNotes, setAcademyEnrollmentNotes] = useState<string | null>(null)
   const [requestingJoin, setRequestingJoin] = useState(false)
   const [requestingAcademyJoin, setRequestingAcademyJoin] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -60,12 +61,15 @@ export const StudentAcademyDetailModal: React.FC<StudentAcademyDetailModalProps>
       const response = await StudentApi.getAcademyEnrollmentStatus(studentId, academy.id)
       if (response.data) {
         setAcademyEnrollmentStatus(response.data.status)
+        setAcademyEnrollmentNotes(response.data.notes || null)
       } else {
         setAcademyEnrollmentStatus(null)
+        setAcademyEnrollmentNotes(null)
       }
     } catch (error) {
       console.error('Error checking academy enrollment status:', error)
       setAcademyEnrollmentStatus(null)
+      setAcademyEnrollmentNotes(null)
     }
   }
 
@@ -261,6 +265,17 @@ export const StudentAcademyDetailModal: React.FC<StudentAcademyDetailModalProps>
 
             {/* Academy Info */}
             <div className="mb-6">
+              {/* Owner Name */}
+              {(academy.owner?.full_name || academy.owner?.email) && (
+                <div className="flex items-center gap-2 text-[#5E8C7D] mb-4">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <span className="font-medium">Owner:</span>
+                  <span>{academy.owner?.full_name || academy.owner?.email}</span>
+                </div>
+              )}
+
               <div className="flex items-center gap-2 text-[#5E8C7D] mb-4">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -367,17 +382,33 @@ export const StudentAcademyDetailModal: React.FC<StudentAcademyDetailModalProps>
                   
                   {academyEnrollmentStatus === 'approved' && (
                     <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-sm text-green-800">
-                        You are approved for this academy! The academy will assign you to batches.
+                      <p className="text-sm text-green-800 font-medium mb-2">
+                        ✅ You are approved for this academy! The academy will assign you to batches.
                       </p>
+                      {academyEnrollmentNotes && (
+                        <div className="mt-2 pt-2 border-t border-green-300">
+                          <p className="text-xs font-semibold text-green-900 mb-1">Academy Message:</p>
+                          <p className="text-sm text-green-800 whitespace-pre-wrap">{academyEnrollmentNotes}</p>
+                        </div>
+                      )}
                     </div>
                   )}
                   
                   {academyEnrollmentStatus === 'rejected' && (
                     <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                      <p className="text-sm text-red-800">
-                        Your request was rejected. Please contact the academy for more information.
+                      <p className="text-sm text-red-800 font-medium mb-2">
+                        ❌ Your request was rejected.
                       </p>
+                      {academyEnrollmentNotes ? (
+                        <div className="mt-2 pt-2 border-t border-red-300">
+                          <p className="text-xs font-semibold text-red-900 mb-1">Reason:</p>
+                          <p className="text-sm text-red-800 whitespace-pre-wrap">{academyEnrollmentNotes}</p>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-red-700">
+                          Please contact the academy for more information.
+                        </p>
+                      )}
                     </div>
                   )}
                   

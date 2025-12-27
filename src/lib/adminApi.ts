@@ -1672,11 +1672,20 @@ export class AdminApi {
   /**
    * Update student enrollment status
    */
-  static async updateStudentEnrollmentStatus(enrollmentId: string, status: string): Promise<ApiResponse<any>> {
+  static async updateStudentEnrollmentStatus(
+    enrollmentId: string, 
+    status: string, 
+    notes?: string | null
+  ): Promise<ApiResponse<any>> {
     try {
+      const updateData: any = { status };
+      if (notes !== undefined) {
+        updateData.notes = notes || null;
+      }
+
       const { data, error } = await supabase
         .from('student_enrollments')
-        .update({ status })
+        .update(updateData)
         .eq('id', enrollmentId)
         .select()
         .single();
@@ -1874,8 +1883,33 @@ export class AdminApi {
     status?: string;
     start_date: string;
     end_date: string;
+    weekly_schedule?: WeeklyScheduleEntry[];
   }): Promise<ApiResponse<any>> {
     try {
+      // First, check if academy is approved or active
+      const { data: academy, error: academyError } = await supabase
+        .from('academies')
+        .select('status')
+        .eq('id', batchData.academy_id)
+        .single();
+
+      if (academyError) {
+        return { data: null, error: `Failed to verify academy status: ${academyError.message}` };
+      }
+
+      if (!academy) {
+        return { data: null, error: 'Academy not found' };
+      }
+
+      // Only allow batch creation if academy is approved or active
+      const allowedStatuses = ['approved', 'active']
+      if (!allowedStatuses.includes(academy.status)) {
+        return { 
+          data: null, 
+          error: `Cannot create batches. Academy status is "${academy.status}". Please wait for admin approval before creating batches.` 
+        };
+      }
+
       const insertData: any = {
         name: batchData.name,
         skill_id: batchData.skill_id,
@@ -1890,6 +1924,16 @@ export class AdminApi {
       // Only include teacher_id if it's provided
       if (batchData.teacher_id) {
         insertData.teacher_id = batchData.teacher_id;
+      }
+
+      // Include weekly_schedule if provided (filter out empty/invalid entries)
+      if (batchData.weekly_schedule && batchData.weekly_schedule.length > 0) {
+        const validSchedule = batchData.weekly_schedule.filter(
+          entry => entry.day && entry.from_time && entry.to_time
+        );
+        if (validSchedule.length > 0) {
+          insertData.weekly_schedule = validSchedule;
+        }
       }
       
       const { data, error } = await supabase
@@ -1920,6 +1964,7 @@ export class AdminApi {
     status?: string;
     start_date?: string;
     end_date?: string;
+    weekly_schedule?: WeeklyScheduleEntry[] | null;
   }): Promise<ApiResponse<any>> {
     try {
       // Prepare update data - convert empty string teacher_id to null
@@ -1929,6 +1974,23 @@ export class AdminApi {
       } else if (updateData.teacher_id === undefined) {
         // If teacher_id is undefined, don't include it in the update
         delete updateData.teacher_id;
+      }
+
+      // Handle weekly_schedule
+      if (updates.weekly_schedule !== undefined) {
+        if (updates.weekly_schedule === null) {
+          // Explicitly set to null to clear schedule
+          updateData.weekly_schedule = null;
+        } else if (Array.isArray(updates.weekly_schedule) && updates.weekly_schedule.length > 0) {
+          // Filter out empty/invalid entries
+          const validSchedule = updates.weekly_schedule.filter(
+            entry => entry.day && entry.from_time && entry.to_time
+          );
+          updateData.weekly_schedule = validSchedule.length > 0 ? validSchedule : null;
+        } else {
+          // Empty array means clear schedule
+          updateData.weekly_schedule = null;
+        }
       }
       
       const { data, error } = await supabase
@@ -2050,6 +2112,123 @@ export class AdminApi {
       return { data: { success: true }, error: null };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to delete batch topic';
+      return { data: null, error: errorMessage };
+    }
+  }
+
+  // =============================================
+  // SCHEDULE EXCEPTION MANAGEMENT
+  // =============================================
+
+  /**
+   * Create a schedule exception
+   */
+  static async createScheduleException(exceptionData: {
+    batch_id: string;
+    exception_date: string;
+    original_day: string;
+    action: 'cancelled' | 'time_changed' | 'moved';
+    from_time?: string | null;
+    to_time?: string | null;
+    new_day?: string | null;
+    notes?: string | null;
+  }): Promise<ApiResponse<any>> {
+    try {
+      const { data, error } = await supabase
+        .from('schedule_exceptions')
+        .insert({
+          ...exceptionData,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) {
+        return { data: null, error: error.message };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create schedule exception';
+      return { data: null, error: errorMessage };
+    }
+  }
+
+  /**
+   * Update a schedule exception
+   */
+  static async updateScheduleException(
+    exceptionId: string,
+    updates: {
+      action?: 'cancelled' | 'time_changed' | 'moved';
+      from_time?: string | null;
+      to_time?: string | null;
+      new_day?: string | null;
+      notes?: string | null;
+    }
+  ): Promise<ApiResponse<any>> {
+    try {
+      const { data, error } = await supabase
+        .from('schedule_exceptions')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', exceptionId)
+        .select()
+        .single();
+
+      if (error) {
+        return { data: null, error: error.message };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update schedule exception';
+      return { data: null, error: errorMessage };
+    }
+  }
+
+  /**
+   * Delete a schedule exception
+   */
+  static async deleteScheduleException(exceptionId: string): Promise<ApiResponse<void>> {
+    try {
+      const { error } = await supabase
+        .from('schedule_exceptions')
+        .delete()
+        .eq('id', exceptionId);
+
+      if (error) {
+        return { data: null, error: error.message };
+      }
+
+      return { data: null, error: null };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete schedule exception';
+      return { data: null, error: errorMessage };
+    }
+  }
+
+  /**
+   * Get all schedule exceptions for a batch
+   */
+  static async getBatchScheduleExceptions(batchId: string): Promise<ApiResponse<any[]>> {
+    try {
+      const { data, error } = await supabase
+        .from('schedule_exceptions')
+        .select('*')
+        .eq('batch_id', batchId)
+        .order('exception_date', { ascending: true });
+
+      if (error) {
+        return { data: null, error: error.message };
+      }
+
+      return { data: data || [], error: null };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get schedule exceptions';
       return { data: null, error: errorMessage };
     }
   }

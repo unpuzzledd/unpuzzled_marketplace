@@ -56,6 +56,7 @@ const ProfileCompletionPage = () => {
     school_name?: string;
     location?: string;
     teacher_skills?: string[];
+    highest_education?: string;
   }) => {
     return await updateUserProfile(data)
   }

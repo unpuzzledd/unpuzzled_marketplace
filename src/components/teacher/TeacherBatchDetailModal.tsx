@@ -4,6 +4,8 @@ import { CreateTopic } from '../CreateTopic'
 import { UpdateTopic } from '../UpdateTopic'
 import { ViewTopic } from '../../pages/ViewTopic'
 import { StudentScoreModal } from './StudentScoreModal'
+import { AdminApi } from '../../lib/adminApi'
+import { mergeScheduleWithExceptions, formatScheduleTime, getDayName } from '../../utils/scheduleUtils'
 
 interface TeacherBatchDetailModalProps {
   isOpen: boolean
@@ -25,6 +27,7 @@ export const TeacherBatchDetailModal: React.FC<TeacherBatchDetailModalProps> = (
   const [topics, setTopics] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [mergedSchedule, setMergedSchedule] = useState<any[]>([])
   
   // Modal states for topic management
   const [showCreateTopic, setShowCreateTopic] = useState(false)
@@ -75,6 +78,20 @@ export const TeacherBatchDetailModal: React.FC<TeacherBatchDetailModalProps> = (
         setError(topicsResponse.error)
       } else if (topicsResponse.data) {
         setTopics(topicsResponse.data)
+      }
+
+      // Load schedule exceptions and merge with schedule
+      if (batch.weekly_schedule && batch.weekly_schedule.length > 0 && batch.start_date && batch.end_date) {
+        const exceptionsResponse = await AdminApi.getBatchScheduleExceptions(batch.id)
+        const merged = mergeScheduleWithExceptions(
+          batch.weekly_schedule,
+          exceptionsResponse.data || [],
+          batch.start_date,
+          batch.end_date
+        )
+        setMergedSchedule(merged)
+      } else {
+        setMergedSchedule([])
       }
     } catch (error) {
       console.error('Error loading batch data:', error)
@@ -324,6 +341,79 @@ export const TeacherBatchDetailModal: React.FC<TeacherBatchDetailModalProps> = (
                         </div>
                       </div>
                     </div>
+
+                    {/* Weekly Schedule */}
+                    {batch?.weekly_schedule && batch.weekly_schedule.length > 0 && (
+                      <div className="bg-[#F0F5F2] rounded-lg p-4 mt-6">
+                        <h3 className="text-base font-semibold text-[#0F1717] mb-3">Weekly Schedule</h3>
+                        {mergedSchedule.length > 0 ? (
+                          <div className="space-y-2">
+                            {mergedSchedule.slice(0, 10).map((scheduleItem, index) => {
+                              const today = new Date();
+                              today.setHours(0, 0, 0, 0);
+                              const isPast = scheduleItem.date < today;
+                              if (isPast) return null;
+
+                              return (
+                                <div key={index} className="bg-white rounded-lg p-3 border border-[#DBE5E0]">
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <div className="font-medium text-[#0F1717] text-sm">
+                                        {getDayName(scheduleItem.day)}, {scheduleItem.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                      </div>
+                                      {scheduleItem.status === 'cancelled' ? (
+                                        <div className="text-sm text-red-600 line-through">
+                                          {formatScheduleTime(scheduleItem.from_time)} - {formatScheduleTime(scheduleItem.to_time)}
+                                          <span className="ml-2 text-xs">(Unavailable)</span>
+                                        </div>
+                                      ) : scheduleItem.status === 'time_changed' ? (
+                                        <div className="text-sm text-[#5E8C7D]">
+                                          {formatScheduleTime(scheduleItem.from_time)} - {formatScheduleTime(scheduleItem.to_time)}
+                                          {scheduleItem.original_time && (
+                                            <span className="ml-2 text-xs text-gray-500">
+                                              (changed from {scheduleItem.original_time})
+                                            </span>
+                                          )}
+                                        </div>
+                                      ) : scheduleItem.status === 'moved' ? (
+                                        <div className="text-sm text-[#5E8C7D]">
+                                          {getDayName(scheduleItem.day)}: {formatScheduleTime(scheduleItem.from_time)} - {formatScheduleTime(scheduleItem.to_time)}
+                                          {scheduleItem.original_time && (
+                                            <span className="ml-2 text-xs text-gray-500">
+                                              (moved from {scheduleItem.original_time})
+                                            </span>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        <div className="text-sm text-[#5E8C7D]">
+                                          {formatScheduleTime(scheduleItem.from_time)} - {formatScheduleTime(scheduleItem.to_time)}
+                                        </div>
+                                      )}
+                                      {scheduleItem.exception?.notes && (
+                                        <p className="text-xs text-gray-600 mt-1 italic">{scheduleItem.exception.notes}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                            {mergedSchedule.length > 10 && (
+                              <p className="text-xs text-[#5E8C7D] text-center mt-2">
+                                Showing next 10 classes. {mergedSchedule.length - 10} more upcoming.
+                              </p>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-[#5E8C7D]">
+                            {batch.weekly_schedule.map((entry, idx) => (
+                              <div key={idx} className="mb-1">
+                                {getDayName(entry.day)}: {formatScheduleTime(entry.from_time)} - {formatScheduleTime(entry.to_time)}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 

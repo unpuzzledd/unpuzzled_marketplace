@@ -218,6 +218,18 @@ const AcademyDashboard = () => {
   }
 
   const handleCreateBatch = () => {
+    // Check if academy is approved or active before allowing batch creation
+    if (!academyData) {
+      alert('Academy data not loaded. Please refresh the page.')
+      return
+    }
+
+    const allowedStatuses = ['approved', 'active']
+    if (!allowedStatuses.includes(academyData.status)) {
+      alert(`Cannot create batches. Your academy status is "${academyData.status}". Please wait for admin approval before creating batches.`)
+      return
+    }
+
     setSelectedBatch(null)
     setShowBatchModal(true)
   }

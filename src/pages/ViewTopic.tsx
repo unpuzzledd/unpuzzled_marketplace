@@ -1,13 +1,44 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { StudentApi } from '../lib/studentApi';
 
 interface ViewTopicProps {
   isOpen?: boolean;
   onClose?: () => void;
+  topicId?: string;
+  topic?: any; // Allow passing topic data directly
 }
 
-export const ViewTopic: React.FC<ViewTopicProps> = ({ isOpen = true, onClose }) => {
+export const ViewTopic: React.FC<ViewTopicProps> = ({ isOpen = true, onClose, topicId, topic: topicProp }) => {
   const navigate = useNavigate();
+  const params = useParams();
+  const [topic, setTopic] = useState<any>(topicProp || null);
+  const [loading, setLoading] = useState(false);
+
+  // Get topicId from props, params, or use topicProp
+  const effectiveTopicId = topicId || params.topicId;
+
+  useEffect(() => {
+    const fetchTopic = async () => {
+      if (!effectiveTopicId || topicProp) return; // Skip if topic is passed directly or no ID
+      
+      setLoading(true);
+      try {
+        const response = await StudentApi.getTopicDetails(effectiveTopicId);
+        if (response.data) {
+          setTopic(response.data);
+        }
+      } catch (error) {
+        console.error('Error fetching topic:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (isOpen && effectiveTopicId) {
+      fetchTopic();
+    }
+  }, [isOpen, effectiveTopicId, topicProp]);
 
   const handleClose = () => {
     if (onClose) {
@@ -25,7 +56,51 @@ export const ViewTopic: React.FC<ViewTopicProps> = ({ isOpen = true, onClose }) 
     handleClose();
   };
 
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'No date';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
+
   if (!isOpen) return null;
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+        <div className="w-full max-w-[603px] flex flex-col items-center justify-center gap-4 rounded-xl bg-[#F7FCFA] p-8 font-lexend">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#009963]"></div>
+          <p className="text-[#5E8C7D]">Loading topic...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if no topic data
+  if (!topic && !effectiveTopicId) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+        <div className="w-full max-w-[603px] flex flex-col items-center justify-center gap-4 rounded-xl bg-[#F7FCFA] p-8 font-lexend">
+          <p className="text-red-600">Topic not found</p>
+          <button 
+            onClick={handleClose}
+            className="px-4 py-2 bg-[#009963] text-white rounded-lg hover:bg-[#007a4f] transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Parse image URLs if stored as JSON string
+  const imageUrls = topic?.image_urls 
+    ? (typeof topic.image_urls === 'string' ? JSON.parse(topic.image_urls) : topic.image_urls)
+    : [];
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
@@ -53,59 +128,71 @@ export const ViewTopic: React.FC<ViewTopicProps> = ({ isOpen = true, onClose }) 
               <div className="flex min-w-0 flex-col items-start flex-1">
                 <div className="flex pb-2 flex-col items-start self-stretch">
                   <h2 className="self-stretch text-lg sm:text-xl md:text-[20px] font-bold leading-tight sm:leading-normal text-[#1C1D1D]">
-                    Understanding Chess Openings
+                    {topic?.title || 'Untitled Topic'}
                   </h2>
                 </div>
               </div>
             </div>
 
+            {topic?.description && (
+              <div className="flex max-w-[480px] p-2 sm:p-3 px-2 sm:px-4 items-end content-end gap-3 sm:gap-4 self-stretch flex-wrap">
+                <div className="flex min-w-0 flex-col items-start flex-1">
+                  <div className="flex pb-2 flex-col items-start self-stretch">
+                    <p className="self-stretch text-sm sm:text-base font-normal leading-5 sm:leading-6 text-black opacity-80 whitespace-pre-wrap">
+                      {topic.description}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {topic?.due_date && (
             <div className="flex max-w-[480px] p-2 sm:p-3 px-2 sm:px-4 items-end content-end gap-3 sm:gap-4 self-stretch flex-wrap">
               <div className="flex min-w-0 flex-col items-start flex-1">
                 <div className="flex pb-2 flex-col items-start self-stretch">
-                  <p className="self-stretch text-sm sm:text-base font-normal leading-5 sm:leading-6 text-black opacity-80">
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco.
+                  <p className="self-stretch text-sm sm:text-base font-medium leading-5 sm:leading-6 text-[#0F1717]">
+                    Due Date: {formatDate(topic.due_date)}
                   </p>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
-          <div className="flex max-w-[480px] p-2 sm:p-3 px-2 sm:px-4 items-end content-end gap-3 sm:gap-4 self-stretch flex-wrap">
-            <div className="flex min-w-0 flex-col items-start flex-1">
-              <div className="flex pb-2 flex-col items-start self-stretch">
-                <p className="self-stretch text-sm sm:text-base font-medium leading-5 sm:leading-6 text-[#0F1717]">
-                  Due Date:  22' Aug 2025
-                </p>
-              </div>
+          {imageUrls.length > 0 && (
+            <div className="flex flex-col items-start gap-2 sm:gap-[-14px] self-stretch">
+              {imageUrls.length > 0 && (
+                <div className="flex p-2 sm:p-3 px-2 sm:px-4 justify-center items-center gap-2 self-stretch">
+                  {imageUrls.slice(0, 2).map((url: string, idx: number) => (
+                    <img 
+                      key={idx}
+                      src={url} 
+                      alt={`Topic image ${idx + 1}`}
+                      className="h-[100px] sm:h-[138px] flex-1 rounded-[7px] object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+              {imageUrls.length > 2 && (
+                <div className="flex p-2 sm:p-3 px-2 sm:px-4 justify-center items-center gap-2 self-stretch">
+                  {imageUrls.slice(2, 4).map((url: string, idx: number) => (
+                    <img 
+                      key={idx + 2}
+                      src={url} 
+                      alt={`Topic image ${idx + 3}`}
+                      className="h-[100px] sm:h-[138px] flex-1 rounded-[7px] object-cover"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
-
-          <div className="flex flex-col items-start gap-2 sm:gap-[-14px] self-stretch">
-            <div className="flex p-2 sm:p-3 px-2 sm:px-4 justify-center items-center gap-2 self-stretch">
-              <img 
-                src="https://api.builder.io/api/v1/image/assets/TEMP/1d2b450752a6788ecc324edd141e60f54a6992de?width=435" 
-                alt="Topic image 1" 
-                className="h-[100px] sm:h-[138px] flex-1 rounded-[7px] object-cover"
-              />
-              <img 
-                src="https://api.builder.io/api/v1/image/assets/TEMP/04fcc64002280148dead709631762db53f6e7523?width=435" 
-                alt="Topic image 2" 
-                className="h-[100px] sm:h-[138px] flex-1 rounded-[7px] object-cover"
-              />
-            </div>
-            <div className="flex p-2 sm:p-3 px-2 sm:px-4 justify-center items-center gap-2 self-stretch">
-              <img 
-                src="https://api.builder.io/api/v1/image/assets/TEMP/283984517e59a51ffe539a94d0f7687adddc6b99?width=435" 
-                alt="Topic image 3" 
-                className="h-[100px] sm:h-[138px] flex-1 rounded-[7px] object-cover"
-              />
-              <img 
-                src="https://api.builder.io/api/v1/image/assets/TEMP/27e8770a817f68e54382ce2375caa9be9886df14?width=435" 
-                alt="Topic image 4" 
-                className="h-[100px] sm:h-[138px] flex-1 rounded-[7px] object-cover"
-              />
-            </div>
-          </div>
+          )}
         </div>
 
         <div className="flex flex-col sm:flex-row p-0 px-2 sm:px-4 items-stretch sm:items-center gap-3 sm:gap-4 self-stretch mt-2 sm:mt-0">

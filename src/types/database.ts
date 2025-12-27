@@ -83,11 +83,32 @@ export interface StudentEnrollment {
   student_id: string;
   academy_id: string;
   status: 'pending' | 'approved' | 'rejected' | 'suspended';
+  notes?: string | null; // Notes from academy owner when approving/rejecting
   created_at: string;
   updated_at: string;
   // Joined data
   student?: User;
   academy?: Academy;
+}
+
+export interface WeeklyScheduleEntry {
+  day: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+  from_time: string; // Format: "HH:mm" (24-hour)
+  to_time: string;   // Format: "HH:mm" (24-hour)
+}
+
+export interface ScheduleException {
+  id: string;
+  batch_id: string;
+  exception_date: string; // ISO date string
+  original_day: string;
+  action: 'cancelled' | 'time_changed' | 'moved';
+  from_time?: string | null;
+  to_time?: string | null;
+  new_day?: string | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Batch {
@@ -100,6 +121,7 @@ export interface Batch {
   end_date: string;
   max_students: number;
   status: 'active' | 'completed' | 'cancelled';
+  weekly_schedule?: WeeklyScheduleEntry[] | null;
   created_at: string;
   updated_at: string;
   // Joined data
@@ -174,6 +196,7 @@ export interface User {
   school_name: string | null;
   location: string | null;  // Society name
   teacher_skills: string[] | null;  // Array of skill IDs for teachers
+  highest_education: string | null;  // Highest education level for teachers
   status: 'active' | 'suspended' | 'pending';
   created_at: string;
   updated_at: string;

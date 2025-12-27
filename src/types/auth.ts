@@ -8,6 +8,7 @@ export interface User {
   school_name: string | null;
   location: string | null;  // Society name
   teacher_skills: string[] | null;  // Array of skill IDs for teachers
+  highest_education: string | null;  // Highest education level for teachers
   status: 'active' | 'suspended' | 'pending';
   created_at: string;
   updated_at: string;
@@ -28,6 +29,7 @@ export interface AuthContextType {
     school_name?: string;
     location?: string;
     teacher_skills?: string[];
+    highest_education?: string;
   }) => Promise<{ success: boolean; error?: string }>;
   isProfileComplete: (user: User | null, role: string | null) => boolean;
 }
