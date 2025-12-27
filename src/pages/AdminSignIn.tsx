@@ -1,45 +1,111 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAdminAuth } from '../hooks/useAdminAuth'
 import { Link } from 'react-router-dom'
+import { LoadingSpinner } from '../components/LoadingSpinner'
 
 const AdminSignIn = () => {
   const { adminSignInWithGoogle, loading, isAuthenticated, adminUser } = useAdminAuth()
   const navigate = useNavigate()
+  const hasRedirectedRef = useRef(false)
 
   // Redirect to admin dashboard if already authenticated
   useEffect(() => {
-    // Check localStorage directly for immediate check
+    // Skip if already redirected
+    if (hasRedirectedRef.current) {
+      console.log('⏭️ [AdminSignIn] Already redirected, skipping')
+      return
+    }
+
+    console.log('🔵 [AdminSignIn] useEffect triggered', {
+      loading,
+      isAuthenticated,
+      hasAdminUser: !!adminUser,
+      pathname: window.location.pathname,
+      search: window.location.search
+    })
+
+    // Check localStorage FIRST - this is the source of truth
     const adminSession = localStorage.getItem('admin_session')
+    const isOAuthCallback = window.location.search.includes('code=')
     
-    // If we have admin session in localStorage, redirect
+    console.log('🔵 [AdminSignIn] Session check:', { 
+      hasSession: !!adminSession,
+      isOAuthCallback,
+      loading,
+      isAuthenticated,
+      hasAdminUser: !!adminUser
+    })
+    
+    // If we have admin session, redirect immediately (don't wait for state sync)
     if (adminSession) {
-      // If React state is synced, redirect immediately
-      if (!loading && isAuthenticated && adminUser) {
-        navigate('/admin', { replace: true })
-        return
+      console.log('✅ [AdminSignIn] Admin session found, redirecting immediately')
+      hasRedirectedRef.current = true
+      // Clean URL AFTER redirect is initiated
+      if (isOAuthCallback) {
+        window.history.replaceState({}, '', window.location.pathname)
       }
-      
-      // If state hasn't synced yet, wait a bit for it to catch up
-      if (loading || !isAuthenticated || !adminUser) {
-        const syncTimer = setTimeout(() => {
-          const stillHasSession = localStorage.getItem('admin_session')
-          if (stillHasSession) {
-            navigate('/admin', { replace: true })
-          }
-        }, 500)
-        return () => clearTimeout(syncTimer)
-      }
+      navigate('/admin', { replace: true })
+      return
     }
     
-    // Also check if authentication just completed (loading went from true to false)
+    // If OAuth callback is in progress but no session yet, keep showing loading
+    if (isOAuthCallback) {
+      console.log('⏳ [AdminSignIn] OAuth callback in progress, waiting for session...')
+      // Poll for session with shorter intervals
+      const checkInterval = setInterval(() => {
+        const session = localStorage.getItem('admin_session')
+        if (session && !hasRedirectedRef.current) {
+          console.log('✅ [AdminSignIn] Session appeared, redirecting')
+          clearInterval(checkInterval)
+          hasRedirectedRef.current = true
+          window.history.replaceState({}, '', window.location.pathname)
+          navigate('/admin', { replace: true })
+        }
+      }, 100)
+      
+      // Timeout after 10 seconds
+      setTimeout(() => {
+        clearInterval(checkInterval)
+      }, 10000)
+      
+      return () => clearInterval(checkInterval)
+    }
+    
+    // If authenticated via React state (fallback), redirect
     if (!loading && isAuthenticated && adminUser) {
+      console.log('✅ [AdminSignIn] Auth completed via state, redirecting')
+      hasRedirectedRef.current = true
       navigate('/admin', { replace: true })
     }
   }, [isAuthenticated, adminUser, loading, navigate])
 
   const handleGoogleSignIn = async () => {
+    console.log('🔵 [AdminSignIn] handleGoogleSignIn called')
     await adminSignInWithGoogle()
+  }
+
+  // Check if OAuth callback is in progress OR if we have a session (redirecting)
+  const isOAuthCallback = window.location.search.includes('code=')
+  const hasAdminSession = localStorage.getItem('admin_session') !== null
+
+  // Show loading spinner during OAuth callback OR if we're redirecting
+  if (isOAuthCallback || loading || hasAdminSession) {
+    console.log('🔵 [AdminSignIn] Rendering loading state', { 
+      isOAuthCallback, 
+      loading, 
+      hasAdminSession 
+    })
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
+        <div className="text-center">
+          <LoadingSpinner 
+            message={hasAdminSession ? 'Redirecting...' : isOAuthCallback ? 'Completing sign in...' : 'Signing in...'}
+            size="lg"
+          />
+        </div>
+      </div>
+    )
   }
 
   return (

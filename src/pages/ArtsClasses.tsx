@@ -40,42 +40,42 @@ const ArtsClasses = () => {
 
           {/* Image Section */}
           <div className="flex flex-col md:flex-row h-auto md:h-[342px] mb-0">
-            <div className="flex flex-col md:flex-row p-3 gap-4 flex-1">
+            <div className="flex flex-col md:flex-row p-2 sm:p-3 gap-3 sm:gap-4 flex-1">
               <img 
                 src="https://api.builder.io/api/v1/image/assets/TEMP/4d5a163ebb4b1aaf19d3a2ef9b28ff6d4af207e0?width=1532" 
                 alt="Kids doing arts and crafts" 
-                className="flex-1 h-[250px] md:h-[306px] min-h-[218px] rounded-xl object-cover"
+                className="flex-1 h-[200px] sm:h-[250px] md:h-[306px] min-h-[180px] sm:min-h-[218px] rounded-xl object-cover w-full"
               />
-              <div className="flex flex-row md:flex-col w-full md:w-[146px] gap-4">
+              <div className="flex flex-row md:flex-col w-full md:w-[146px] gap-2 sm:gap-3 md:gap-4">
                 <img 
                   src="https://api.builder.io/api/v1/image/assets/TEMP/419eb0ecd81845f3434666675c17321bde1ad0fa?width=292" 
                   alt="Art supplies and materials" 
-                  className="flex-1 h-[120px] md:h-auto rounded-xl object-cover"
+                  className="flex-1 h-[100px] sm:h-[120px] md:h-auto rounded-xl object-cover"
                 />
                 <img 
                   src="https://api.builder.io/api/v1/image/assets/TEMP/de15dbe6969b4881658e23258f0534126e4b3507?width=292" 
                   alt="Children painting" 
-                  className="flex-1 h-[120px] md:h-auto rounded-xl object-cover"
+                  className="flex-1 h-[100px] sm:h-[120px] md:h-auto rounded-xl object-cover"
                 />
                 <img 
                   src="https://api.builder.io/api/v1/image/assets/TEMP/db63623cd0a8eb4f79f5785a5923c8ef7a53f168?width=292" 
                   alt="Art class in session" 
-                  className="flex-1 h-[120px] md:h-auto rounded-xl object-cover"
+                  className="flex-1 h-[100px] sm:h-[120px] md:h-auto rounded-xl object-cover"
                 />
               </div>
             </div>
           </div>
 
           {/* Content Section */}
-          <div className="bg-white p-3">
+          <div className="bg-white p-2 sm:p-3">
             {/* Title */}
-            <div className="flex justify-between items-start gap-3 mb-2">
-              <h1 className="text-2xl font-bold text-[#121714] font-lexend leading-[120%] w-[863px]">
+            <div className="flex justify-between items-start gap-2 sm:gap-3 mb-2">
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-[#121714] font-lexend leading-[120%] flex-1 min-w-0 pr-2">
                 Arts Classes for Kids – Create, Imagine, Inspire
               </h1>
               <button 
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="w-7 h-6 bg-[#D9D9D9] rounded flex items-center justify-center"
+                className="w-7 h-6 bg-[#D9D9D9] rounded flex items-center justify-center flex-shrink-0"
               >
                 <svg width="15" height="9" viewBox="0 0 15 9" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M6.68434 0.741381C7.07487 0.350857 7.70803 0.350856 8.09856 0.74138L13.9887 6.63151C14.3792 7.02204 14.3792 7.6552 13.9887 8.04573L13.6986 8.33586C13.308 8.72639 12.6749 8.72639 12.2843 8.33586L8.09856 4.15008C7.70803 3.75955 7.07487 3.75955 6.68435 4.15008L2.49856 8.33586C2.10803 8.72639 1.47487 8.72639 1.08434 8.33586L0.794211 8.04573C0.403687 7.6552 0.403687 7.02204 0.794211 6.63151L6.68434 0.741381Z" fill="#1C1B1F"/>
@@ -85,7 +85,7 @@ const ArtsClasses = () => {
 
             {/* Description */}
             <div className="mb-2">
-              <p className="text-base text-[#121714] font-normal font-lexend leading-6">
+              <p className="text-sm sm:text-base text-[#121714] font-normal font-lexend leading-5 sm:leading-6 break-words">
                 Art is the language of creativity – a way for children to express their thoughts, feelings, and ideas through colours, shapes, and imagination.
                 <br /><br />
                 At Unpuzzle Club, we provide engaging arts classes for kids that go beyond simple drawing and colouring. We help children explore painting, sketching, craftwork, and creative design – developing skills that enrich their personality and boost their confidence.
@@ -130,22 +130,22 @@ const ArtsClasses = () => {
           </div>
 
           {/* Contact Us Button */}
-          <div className="flex p-3 justify-center mb-4">
+          <div className="flex p-2 sm:p-3 justify-center mb-4">
             <a 
               href="https://wa.me/918660496605" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="flex h-12 min-w-[84px] max-w-[480px] px-5 justify-center items-center bg-[#45A180] rounded-xl hover:bg-[#3d8b6f] transition-colors"
+              className="flex h-11 sm:h-12 min-w-[84px] max-w-[480px] w-full sm:w-auto px-4 sm:px-5 justify-center items-center bg-[#45A180] rounded-xl hover:bg-[#3d8b6f] transition-colors"
             >
-              <span className="text-base font-bold text-white font-lexend">Contact Us</span>
+              <span className="text-sm sm:text-base font-bold text-white font-lexend">Contact Us</span>
             </a>
           </div>
 
           {/* Contact Section */}
-          <div className="px-4 mb-4">
-            <div className="bg-white border border-[#D9E8E3] rounded-xl p-4">
-              <h3 className="text-base font-bold text-[#121714] font-lexend mb-4">Contact</h3>
-              <div className="text-sm font-normal text-[#638778] font-lexend leading-[31px]">
+          <div className="px-2 sm:px-4 mb-4">
+            <div className="bg-white border border-[#D9E8E3] rounded-xl p-3 sm:p-4">
+              <h3 className="text-sm sm:text-base font-bold text-[#121714] font-lexend mb-3 sm:mb-4">Contact</h3>
+              <div className="text-xs sm:text-sm font-normal text-[#638778] font-lexend leading-6 sm:leading-[31px] break-words">
                 <span className="font-bold">Call Us:</span> +91-8660496605
                 <br />
                 <span className="font-bold">Email:</span> contact@unpuzzle.club
@@ -156,11 +156,11 @@ const ArtsClasses = () => {
           </div>
 
           {/* Why Choose Us Section */}
-          <div className="px-4">
-            <div className="bg-white border border-[#D9E8E3] rounded-xl p-4">
-              <h3 className="text-base font-bold text-[#121714] font-lexend mb-4">Why Choose Unpuzzle Club?</h3>
-              <div className="bg-white rounded-xl p-4">
-                <div className="text-sm font-semibold text-[#638778] font-lexend leading-[25px]">
+          <div className="px-2 sm:px-4">
+            <div className="bg-white border border-[#D9E8E3] rounded-xl p-3 sm:p-4">
+              <h3 className="text-sm sm:text-base font-bold text-[#121714] font-lexend mb-3 sm:mb-4">Why Choose Unpuzzle Club?</h3>
+              <div className="bg-white rounded-xl p-2 sm:p-4">
+                <div className="text-xs sm:text-sm font-semibold text-[#638778] font-lexend leading-5 sm:leading-[25px] break-words">
                   <span className="font-bold">✔ Experienced Art Instructors – Passionate mentors who guide children step-by-step.</span>
                   <br />
                   <span className="font-bold">✔ Variety of Art Forms – Drawing, painting, crafts, creative design, and more.</span>

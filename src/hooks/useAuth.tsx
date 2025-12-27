@@ -18,6 +18,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true)
   const initializingRef = useRef(false)
   const mountedRef = useRef(true)
+  const isOAuthInProgressRef = useRef(false)
+  const isFetchingProfileRef = useRef(false)
+  const lastFetchedUserIdRef = useRef<string | null>(null)
+  const currentUserRef = useRef<User | null>(null)
+
+  // Sync ref with user state for use in closures
+  useEffect(() => {
+    currentUserRef.current = user
+  }, [user])
 
   useEffect(() => {
     mountedRef.current = true
@@ -29,14 +38,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     initializingRef.current = true
 
-    // Safety timeout - reduced to 3 seconds for faster feedback
+    // Safety timeout - 10 seconds to allow for slow connections
     const timeout = setTimeout(() => {
       console.log('⚠️ Safety timeout triggered - auth took too long')
       if (mountedRef.current) {
         setLoading(false)
         initializingRef.current = false
+        isFetchingProfileRef.current = false
       }
-    }, 3000)
+    }, 10000)
 
     // Get initial session
     const initializeAuth = async () => {
@@ -47,7 +57,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // Add timeout to getSession to prevent infinite hang
         const sessionPromise = supabase.auth.getSession()
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('getSession timeout after 5s')), 5000)
+          setTimeout(() => reject(new Error('getSession timeout after 10s')), 10000)
         )
         
         const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise]) as Awaited<ReturnType<typeof supabase.auth.getSession>>
@@ -95,10 +105,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       async (event, session) => {
         console.log('🟡 Auth state change:', event, { hasSession: !!session, hasUser: !!session?.user })
         
-        // For SIGNED_IN event, always process (user just logged in)
+        // For SIGNED_IN event, only process if user wasn't already authenticated
+        // This prevents processing SIGNED_IN events that fire on tab visibility changes
         if (event === 'SIGNED_IN' && session?.user) {
+          // Check if user is already authenticated (to avoid processing duplicate SIGNED_IN events)
+          const isOAuthCallback = window.location.search.includes('code=')
+          const alreadyHasUser = mountedRef.current && currentUserRef.current?.id === session.user.id
+          
+          // Only process if it's an OAuth callback OR user wasn't authenticated before
+          if (!isOAuthCallback && alreadyHasUser) {
+            console.log('🟡 SIGNED_IN - skipping (already authenticated)')
+            return
+          }
+          
           console.log('🟡 SIGNED_IN - processing...')
           initializingRef.current = false // Reset for new sign in
+          isOAuthInProgressRef.current = false // Reset OAuth flag - auth completed
           if (mountedRef.current) {
             setLoading(true)
           }
@@ -110,6 +132,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (event === 'SIGNED_OUT') {
           console.log('🟡 SIGNED_OUT - clearing state')
           initializingRef.current = false // Reset for next sign in
+          isOAuthInProgressRef.current = false // Reset OAuth flag
           if (mountedRef.current) {
             setUser(null)
             setLoading(false)
@@ -125,9 +148,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (session?.user) {
           console.log('🟡 Session user found, fetching profile...')
+          isOAuthInProgressRef.current = false // Reset OAuth flag - auth completed
           await fetchUserProfile(session.user)
         } else {
           console.log('🟡 No session user, clearing state')
+          isOAuthInProgressRef.current = false // Reset OAuth flag
           if (mountedRef.current) {
             setUser(null)
             setLoading(false)
@@ -145,10 +170,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchUserProfile = async (authUser: SupabaseUser) => {
     console.log('🔵 fetchUserProfile called for:', authUser.id, authUser.email)
+    
+    // Prevent concurrent fetches for the same user
+    if (isFetchingProfileRef.current && lastFetchedUserIdRef.current === authUser.id) {
+      console.log('🔵 fetchUserProfile already in progress for this user, skipping...')
+      return
+    }
+    
     try {
+      isFetchingProfileRef.current = true
+      lastFetchedUserIdRef.current = authUser.id
+      
       // Add timeout to prevent indefinite hanging
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Query timeout after 5s')), 5000)
+        setTimeout(() => reject(new Error('Query timeout after 10s')), 10000)
       )
       
       const queryPromise = supabase
@@ -214,11 +249,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(null)
         setLoading(false)
       }
+    } finally {
+      isFetchingProfileRef.current = false
     }
   }
 
   const signUpWithGoogle = async () => {
+    // Prevent multiple simultaneous OAuth requests
+    if (isOAuthInProgressRef.current) {
+      console.log('🔵 OAuth already in progress, skipping...')
+      return
+    }
+    
     try {
+      isOAuthInProgressRef.current = true
       setLoading(true)
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -230,16 +274,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         }
       })
-      if (error) throw error
+      if (error) {
+        // Only reset loading on error (redirect didn't happen)
+        setLoading(false)
+        isOAuthInProgressRef.current = false
+        alert('Error signing up with Google. Please try again.')
+      }
+      // Don't set loading=false here - redirect is happening
     } catch (error) {
-      alert('Error signing up with Google. Please try again.')
-    } finally {
       setLoading(false)
+      isOAuthInProgressRef.current = false
+      alert('Error signing up with Google. Please try again.')
     }
   }
 
   const signInWithGoogle = async () => {
+    // Prevent multiple simultaneous OAuth requests
+    if (isOAuthInProgressRef.current) {
+      console.log('🔵 OAuth already in progress, skipping...')
+      return
+    }
+    
     try {
+      isOAuthInProgressRef.current = true
       setLoading(true)
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -247,16 +304,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           redirectTo: `${window.location.origin}/dashboard`
         }
       })
-      if (error) throw error
+      if (error) {
+        // Only reset loading on error (redirect didn't happen)
+        setLoading(false)
+        isOAuthInProgressRef.current = false
+        alert('Error signing in with Google. Please try again.')
+      }
+      // Don't set loading=false here - redirect is happening
     } catch (error) {
-      alert('Error signing in with Google. Please try again.')
-    } finally {
       setLoading(false)
+      isOAuthInProgressRef.current = false
+      alert('Error signing in with Google. Please try again.')
     }
   }
 
   const smartLoginWithGoogle = async () => {
+    // Prevent multiple simultaneous OAuth requests
+    if (isOAuthInProgressRef.current) {
+      console.log('🔵 OAuth already in progress, skipping...')
+      return
+    }
+    
     try {
+      isOAuthInProgressRef.current = true
       setLoading(true)
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -264,11 +334,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           redirectTo: `${window.location.origin}/smart-redirect`
         }
       })
-      if (error) throw error
+      if (error) {
+        // Only reset loading on error (redirect didn't happen)
+        setLoading(false)
+        isOAuthInProgressRef.current = false
+        alert('Error signing in with Google. Please try again.')
+      }
+      // Don't set loading=false here - redirect is happening
     } catch (error) {
-      alert('Error signing in with Google. Please try again.')
-    } finally {
       setLoading(false)
+      isOAuthInProgressRef.current = false
+      alert('Error signing in with Google. Please try again.')
     }
   }
 

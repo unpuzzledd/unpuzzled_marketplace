@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { AboutUs } from '../components/AboutUs'
@@ -6,6 +6,7 @@ import { ContactUs } from '../components/ContactUs'
 import { TermsOfService } from '../components/TermsOfService'
 import { PrivacyPolicy } from '../components/PrivacyPolicy'
 import WhyChooseUs from '../components/WhyChooseUs'
+import { LoadingSpinner } from '../components/LoadingSpinner'
 
 const Home = () => {
   const navigate = useNavigate()
@@ -17,37 +18,95 @@ const Home = () => {
   const [showInstructorForm, setShowInstructorForm] = useState(false)
   const [currentSlide, setCurrentSlide] = useState(0)
   const [logoError, setLogoError] = useState(false)
-  const [isSignUpLoading, setIsSignUpLoading] = useState(false)
-  const [isSignInLoading, setIsSignInLoading] = useState(false)
   const { user, loading, smartLoginWithGoogle, signUpWithGoogle, signOut } = useAuth()
+  const hasRedirectedRef = useRef(false)
 
   // Redirect authenticated users to their dashboard
   useEffect(() => {
+    const currentPath = window.location.pathname
+    
+    // If we're not on the home page, don't redirect (we're already somewhere else)
+    if (currentPath !== '/') {
+      return
+    }
+    
+    // Skip if already redirected (prevents re-runs on tab visibility change)
+    if (hasRedirectedRef.current) {
+      return
+    }
+
+    console.log('🔵 [Home] useEffect triggered', {
+      loading,
+      hasUser: !!user,
+      userRole: user?.role,
+      pathname: window.location.pathname,
+      search: window.location.search
+    })
+
+    // Check if we're processing an OAuth callback (has code parameter)
+    const isOAuthCallback = window.location.search.includes('code=')
+    const isAdminRoute = window.location.pathname === '/admin' || window.location.pathname === '/admin/signin'
+    
+    console.log('🔵 [Home] OAuth callback check:', { isOAuthCallback, isAdminRoute })
+    
+    // If OAuth callback is in progress, don't redirect yet - wait for auth to complete
+    if (isOAuthCallback && isAdminRoute) {
+      console.log('🔵 [Home] Admin OAuth callback detected, checking session...')
+      // Check if admin session exists (callback completed)
+      const adminSession = localStorage.getItem('admin_session')
+      console.log('🔵 [Home] Admin session check:', { hasSession: !!adminSession, loading })
+      if (adminSession && !loading) {
+        console.log('✅ [Home] Admin session found and not loading, redirecting to /admin')
+        hasRedirectedRef.current = true
+        navigate('/admin', { replace: true })
+      } else {
+        console.log('⏳ [Home] Waiting for admin session or loading to complete...')
+      }
+      return
+    }
+    
     if (!loading && user) {
+      console.log('🔵 [Home] User authenticated, checking role:', user.role)
       
       // Check if user is admin - only redirect if they have admin session
       if (user.role === 'admin' || user.role === 'super_admin') {
         // Check if user has admin session before redirecting to admin dashboard
         const adminSession = localStorage.getItem('admin_session')
+        console.log('🔵 [Home] Admin user detected, checking admin session:', { hasSession: !!adminSession })
         if (adminSession) {
+          console.log('✅ [Home] Admin session found, redirecting to /admin')
+          hasRedirectedRef.current = true
           navigate('/admin')
         } else {
+          console.log('⏳ [Home] Admin user but no admin session, staying on home')
           // User has admin role but no admin session - don't redirect, let them stay on home
           // They can manually navigate to /admin/signin if needed
           return
         }
       } else if (user.role === 'student') {
+        console.log('✅ [Home] Student user, redirecting to /student')
+        hasRedirectedRef.current = true
         navigate('/student')
       } else if (user.role === 'teacher') {
+        console.log('✅ [Home] Teacher user, redirecting to /teacher')
+        hasRedirectedRef.current = true
         navigate('/teacher')
       } else if (user.role === 'academy_owner') {
+        console.log('✅ [Home] Academy owner user, redirecting to /academy')
+        hasRedirectedRef.current = true
         navigate('/academy')
       } else if (user.role) {
+        console.log('✅ [Home] User with role, redirecting to /dashboard')
+        hasRedirectedRef.current = true
         navigate('/dashboard')
       } else {
+        console.log('✅ [Home] User without role, redirecting to /role-selection')
         // User without role - go to role selection
+        hasRedirectedRef.current = true
         navigate('/role-selection')
       }
+    } else {
+      console.log('🔵 [Home] Not redirecting:', { loading, hasUser: !!user })
     }
   }, [user, loading, navigate])
 
@@ -78,21 +137,11 @@ const Home = () => {
   }
 
   const handleSmartLogin = async () => {
-    setIsSignInLoading(true)
-    try {
-      await smartLoginWithGoogle()
-    } finally {
-      setIsSignInLoading(false)
-    }
+    await smartLoginWithGoogle()
   }
 
   const handleSignUp = async () => {
-    setIsSignUpLoading(true)
-    try {
-      await signUpWithGoogle()
-    } finally {
-      setIsSignUpLoading(false)
-    }
+    await signUpWithGoogle()
   }
 
   const handleSignOut = async () => {
@@ -175,18 +224,18 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-[#F7FCFA]">
       {/* Header */}
-      <header className="flex justify-between items-center px-4 md:px-10 py-6 border-b border-[#E5E8EB]">
-        <div className="flex items-center gap-4">
-            <Link to="/" className="flex items-center gap-4">
+      <header className="flex justify-between items-center px-3 sm:px-4 md:px-10 py-4 sm:py-6 border-b border-[#E5E8EB] gap-2">
+        <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0 min-w-0">
+            <Link to="/" className="flex items-center gap-2 sm:gap-4">
               {!logoError ? (
                 <img 
                   src="/assets/unpuzzle-logo.png" 
                   alt="UNPUZZLE.CLUB Logo" 
-                  className="h-24 w-auto"
+                  className="h-16 sm:h-20 md:h-24 w-auto"
                   onError={() => setLogoError(true)}
                 />
               ) : (
-                <h1 className="text-xl font-bold text-[#0D1C17] font-lexend">
+                <h1 className="text-lg sm:text-xl font-bold text-[#0D1C17] font-lexend">
                   Unpuzzle Club
                 </h1>
               )}
@@ -194,45 +243,47 @@ const Home = () => {
         </div>
         
         {/* Authentication Section */}
-        <div className="flex items-center gap-2 sm:gap-4">
+        <div className="flex items-center gap-1 sm:gap-2 md:gap-4 flex-shrink-0">
           {loading ? (
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#009963]"></div>
+            <div className="flex items-center gap-2">
+              <LoadingSpinner size="sm" message="" />
+            </div>
           ) : user ? (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <Link
                 to="/dashboard"
-                className="text-sm md:text-base text-[#0D1C17] font-lexend hover:text-[#009963] transition-colors"
+                className="text-xs sm:text-sm md:text-base text-[#0D1C17] font-lexend hover:text-[#009963] transition-colors truncate max-w-[100px] sm:max-w-none"
               >
                 {user.full_name || user.email}
               </Link>
               <button
                 onClick={handleSignOut}
-                className="px-3 sm:px-4 py-2 sm:py-3 bg-[#009963] text-[#F7FCFA] font-bold text-xs sm:text-sm rounded-xl font-lexend min-w-[80px] sm:min-w-[100px] h-[44px] sm:h-[49px] flex items-center justify-center hover:bg-[#007a4d] transition-colors"
+                className="px-2 sm:px-3 md:px-4 py-2 sm:py-3 bg-[#009963] text-[#F7FCFA] font-bold text-xs sm:text-sm rounded-xl font-lexend min-w-[70px] sm:min-w-[80px] md:min-w-[100px] h-[40px] sm:h-[44px] md:h-[49px] flex items-center justify-center hover:bg-[#007a4d] transition-colors"
               >
                 Sign Out
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-2 sm:gap-4">
+            <div className="flex items-center gap-1 sm:gap-2 md:gap-4 flex-wrap">
               <Link 
                 to="/admin/signin"
-                className="px-3 sm:px-4 py-2 sm:py-3 bg-[#E5F5F0] text-[#0D1C17] font-bold text-xs sm:text-sm rounded-xl font-lexend min-w-[80px] sm:min-w-[100px] h-[44px] sm:h-[49px] flex items-center justify-center hover:bg-[#D9E8E3] transition-colors"
+                className="px-2 sm:px-3 md:px-4 py-2 sm:py-3 bg-[#E5F5F0] text-[#0D1C17] font-bold text-xs sm:text-sm rounded-xl font-lexend min-w-[60px] sm:min-w-[80px] md:min-w-[100px] h-[40px] sm:h-[44px] md:h-[49px] flex items-center justify-center hover:bg-[#D9E8E3] transition-colors"
               >
                 Admin
               </Link>
               <button
                 onClick={handleSignUp}
-                disabled={isSignUpLoading || isSignInLoading}
-                className="px-3 sm:px-4 py-2 sm:py-3 bg-[#F0F5F2] text-[#0D1C17] font-bold text-xs sm:text-sm rounded-xl font-lexend min-w-[80px] sm:min-w-[100px] h-[44px] sm:h-[49px] flex items-center justify-center hover:bg-[#E5F5F0] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={loading}
+                className="px-2 sm:px-3 md:px-4 py-2 sm:py-3 bg-[#E5F5F0] text-[#0D1C17] font-bold text-xs sm:text-sm rounded-xl font-lexend min-w-[70px] sm:min-w-[80px] md:min-w-[100px] h-[40px] sm:h-[44px] md:h-[49px] flex items-center justify-center hover:bg-[#D9E8E3] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSignUpLoading ? 'Signing Up...' : 'Sign Up'}
+                {loading ? 'Please wait...' : 'Sign Up'}
               </button>
               <button
                 onClick={handleSmartLogin}
-                disabled={isSignUpLoading || isSignInLoading}
-                className="px-3 sm:px-4 py-2 sm:py-3 bg-[#009963] text-[#F7FCFA] font-bold text-xs sm:text-sm rounded-xl font-lexend min-w-[80px] sm:min-w-[100px] h-[44px] sm:h-[49px] flex items-center justify-center hover:bg-[#007a4d] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={loading}
+                className="px-2 sm:px-3 md:px-4 py-2 sm:py-3 bg-[#009963] text-[#F7FCFA] font-bold text-xs sm:text-sm rounded-xl font-lexend min-w-[70px] sm:min-w-[80px] md:min-w-[100px] h-[40px] sm:h-[44px] md:h-[49px] flex items-center justify-center hover:bg-[#007a4d] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSignInLoading ? 'Signing In...' : 'Log In'}
+                {loading ? 'Please wait...' : 'Log In'}
               </button>
             </div>
           )}
@@ -313,9 +364,9 @@ const Home = () => {
           {/* Course Cards */}
           <section className="mb-8 md:mb-12">
             <div className="flex items-start align-self-stretch">
-              <div className="flex flex-col md:flex-row px-2 md:px-4 items-start gap-4 md:gap-3 w-full">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 px-2 md:px-4 items-start gap-4 md:gap-3 w-full">
                 {courses.map((course) => (
-                  <div key={course.id} className="w-full md:min-w-[240px] flex flex-col items-start gap-3 md:gap-4 border-radius-[8px]">
+                  <div key={course.id} className="w-full flex flex-col items-start gap-3 md:gap-4 border-radius-[8px]">
                     {course.id === 1 ? (
                       <Link to="/chess-classes">
                         <img

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAdminAuth } from '../hooks/useAdminAuth'
 import { AdminApi } from '../lib/adminApi'
@@ -6,6 +6,7 @@ import { AdminAcademyManagement } from '../components/AdminAcademyManagement'
 import { AdminLocationManagement } from '../components/AdminLocationManagement'
 import { AdminSkillManagement } from '../components/AdminSkillManagement'
 import { AdminPhotoApproval } from '../components/AdminPhotoApproval'
+import { LoadingSpinner } from '../components/LoadingSpinner'
 
 const AdminDashboard = () => {
   const [currentPage, setCurrentPage] = useState('dashboard')
@@ -17,57 +18,58 @@ const AdminDashboard = () => {
   const [recentActivities, setRecentActivities] = useState<any[]>([])
   const [dataLoading, setDataLoading] = useState(true)
   const [dataError, setDataError] = useState<string | null>(null)
+  const hasCheckedAuthRef = useRef(false)
 
   useEffect(() => {
-    // Always check localStorage directly for most up-to-date state
+    // Always check localStorage directly - this is the source of truth
     const adminSessionFromStorage = localStorage.getItem('admin_session')
     const hasAdminSession = !!adminSessionFromStorage
+    const currentPath = window.location.pathname
+    const isOAuthCallback = window.location.search.includes('code=')
+    
+    // If we have admin session AND we're on /admin, we're good - don't redirect
+    // This prevents redirects on remounts when already authenticated
+    if (hasAdminSession && currentPath === '/admin') {
+      // Clean OAuth code from URL if present
+      if (isOAuthCallback) {
+        window.history.replaceState({}, '', window.location.pathname)
+      }
+      hasCheckedAuthRef.current = true
+      return
+    }
     
     // Never redirect while loading - wait for authentication to complete
     if (loading) {
       return
     }
     
-    // Check if this is an OAuth callback (has code parameter)
-    const isOAuthCallback = window.location.search.includes('code=')
-    
-    // If we have admin session in localStorage, we're authenticated
-    // This is the source of truth since localStorage updates synchronously
-    if (hasAdminSession) {
-      // If React state hasn't caught up yet, wait a bit for it to sync
-      if (!isAuthenticated || !adminUser) {
-        const syncTimer = setTimeout(() => {
-          // Re-check after a brief delay
-          const stillHasSession = localStorage.getItem('admin_session')
-          if (!stillHasSession && !isAuthenticated) {
-            navigate('/admin/signin')
-          }
-        }, 500)
-        return () => clearTimeout(syncTimer)
-      }
-      
-      // Clean OAuth code from URL if present
-      if (isOAuthCallback) {
-        window.history.replaceState({}, '', window.location.pathname)
-      }
-      return // Authenticated, no redirect needed
+    // If we have admin session but React state hasn't synced yet, wait a bit
+    if (hasAdminSession && (!isAuthenticated || !adminUser)) {
+      const syncTimer = setTimeout(() => {
+        const stillHasSession = localStorage.getItem('admin_session')
+        // Only redirect if session is actually gone
+        if (!stillHasSession && currentPath === '/admin') {
+          navigate('/admin/signin')
+        }
+      }, 500)
+      return () => clearTimeout(syncTimer)
     }
     
     // No admin session - check if we're processing OAuth callback
     if (isOAuthCallback) {
       const redirectTimer = setTimeout(() => {
-        // Final check - re-read localStorage (source of truth)
         const finalCheckSession = localStorage.getItem('admin_session')
-        if (!finalCheckSession) {
+        if (!finalCheckSession && currentPath === '/admin') {
           navigate('/admin/signin')
         }
-      }, 6000) // 6 seconds to give callback plenty of time
-      
+      }, 6000)
       return () => clearTimeout(redirectTimer)
     }
     
-    // Not loading, not authenticated, and not OAuth callback - redirect to signin
-    if (!isAuthenticated && !hasAdminSession) {
+    // Not authenticated and not on signin page - redirect to signin
+    // Only redirect if we're actually on /admin (not already on signin)
+    if (!hasAdminSession && currentPath === '/admin') {
+      hasCheckedAuthRef.current = true
       navigate('/admin/signin')
     }
     
@@ -112,11 +114,8 @@ const AdminDashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
+        <LoadingSpinner message="Loading admin dashboard..." size="lg" />
       </div>
     )
   }
@@ -130,10 +129,7 @@ const AdminDashboard = () => {
     if (dataLoading) {
       return (
         <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading dashboard data...</p>
-          </div>
+          <LoadingSpinner message="Loading dashboard data..." size="md" />
         </div>
       )
     }

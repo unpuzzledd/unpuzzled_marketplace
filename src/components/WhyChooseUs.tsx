@@ -104,9 +104,9 @@ const WhyChooseUs = () => {
   }, [features.length])
 
   return (
-    <section className="py-16 bg-[#F7FCFA]">
-      <div className="flex flex-col justify-center items-center gap-8">
-        <h3 className="text-[36px] font-black text-[#0D1C17] text-center tracking-[-1px] font-lexend leading-[45px]">
+    <section className="py-8 sm:py-12 md:py-16 bg-[#F7FCFA]">
+      <div className="flex flex-col justify-center items-center gap-6 sm:gap-8 px-4">
+        <h3 className="text-2xl sm:text-3xl md:text-[36px] font-black text-[#0D1C17] text-center tracking-[-1px] font-lexend leading-tight sm:leading-[45px]">
           Why Choose Us?
         </h3>
         
@@ -124,22 +124,22 @@ const WhyChooseUs = () => {
             {duplicatedFeatures.map((feature, index) => (
               <div
                 key={`${feature.title}-${index}`}
-                className="w-1/5 flex-shrink-0 px-3"
+                className="w-full sm:w-1/2 md:w-1/3 lg:w-1/4 xl:w-1/5 flex-shrink-0 px-2 sm:px-3"
                 style={{ 
                   minWidth: '280px',
                   transform: 'translateZ(0)',
                   backfaceVisibility: 'hidden'
                 }}
               >
-                <div className="w-full h-[234px] p-6 flex flex-col items-center gap-6 rounded-xl border border-[#DBE5E0] bg-white hover:shadow-lg transition-shadow duration-300">
+                <div className="w-full h-auto min-h-[200px] sm:h-[234px] p-4 sm:p-6 flex flex-col items-center gap-4 sm:gap-6 rounded-xl border border-[#DBE5E0] bg-white hover:shadow-lg transition-shadow duration-300">
                   <div className="h-8 flex items-center justify-center">
                     {feature.icon}
                   </div>
                   <div className="flex flex-col gap-1 text-center">
-                    <h4 className="text-base font-bold text-[#121714] font-lexend leading-5">
+                    <h4 className="text-sm sm:text-base font-bold text-[#121714] font-lexend leading-5">
                       {feature.title}
                     </h4>
-                    <p className="text-[13px] text-[#618A73] font-lexend leading-[21px]">
+                    <p className="text-xs sm:text-[13px] text-[#618A73] font-lexend leading-[18px] sm:leading-[21px]">
                       {feature.description}
                     </p>
                   </div>
