@@ -286,17 +286,43 @@ export const StudentManagementModal: React.FC<StudentManagementModalProps> = ({
                     <p className="text-sm text-[#5E8C7D]">{student.student.email}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-[#0F1717]">Status:</span>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    student.status === 'approved' 
-                      ? 'bg-green-100 text-green-800' 
-                      : student.status === 'pending'
-                      ? 'bg-yellow-100 text-yellow-800'
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {student.status}
-                  </span>
+                <div className="space-y-2 mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-[#0F1717]">Status:</span>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      student.status === 'approved' 
+                        ? 'bg-green-100 text-green-800' 
+                        : student.status === 'pending'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {student.status}
+                    </span>
+                  </div>
+                  {student.student.date_of_birth && (
+                    <div className="text-sm text-[#0F1717]">
+                      <span className="font-medium">Date of Birth:</span>{' '}
+                      <span className="text-[#5E8C7D]">
+                        {new Date(student.student.date_of_birth).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </span>
+                    </div>
+                  )}
+                  {student.student.school_name && (
+                    <div className="text-sm text-[#0F1717]">
+                      <span className="font-medium">School:</span>{' '}
+                      <span className="text-[#5E8C7D]">{student.student.school_name}</span>
+                    </div>
+                  )}
+                  {student.student.location && (
+                    <div className="text-sm text-[#0F1717]">
+                      <span className="font-medium">Location:</span>{' '}
+                      <span className="text-[#5E8C7D]">{student.student.location}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

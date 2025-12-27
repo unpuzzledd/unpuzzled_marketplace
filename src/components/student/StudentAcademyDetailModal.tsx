@@ -25,21 +25,50 @@ export const StudentAcademyDetailModal: React.FC<StudentAcademyDetailModalProps>
   const [enrollingBatchId, setEnrollingBatchId] = useState<string | null>(null)
   const [enrollmentStatuses, setEnrollmentStatuses] = useState<Record<string, string>>({})
   const [assignmentStatus, setAssignmentStatus] = useState<string | null>(null)
+  const [academyEnrollmentStatus, setAcademyEnrollmentStatus] = useState<string | null>(null)
   const [requestingJoin, setRequestingJoin] = useState(false)
+  const [requestingAcademyJoin, setRequestingAcademyJoin] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
   useEffect(() => {
     if (isOpen && academy) {
       if (userRole === 'student' && studentId) {
-        // Check enrollment status for each batch
-        checkEnrollmentStatuses()
+        // Check academy enrollment status first
+        checkAcademyEnrollmentStatus()
+        // If approved, also check batch enrollment statuses
+        if (academyEnrollmentStatus === 'approved') {
+          checkEnrollmentStatuses()
+        }
       } else if (userRole === 'teacher' && teacherId) {
         // Check assignment status for teacher
         checkAssignmentStatus()
       }
     }
   }, [isOpen, academy, studentId, teacherId, userRole])
+
+  // Re-check batch statuses when academy enrollment becomes approved
+  useEffect(() => {
+    if (academyEnrollmentStatus === 'approved' && userRole === 'student' && studentId) {
+      checkEnrollmentStatuses()
+    }
+  }, [academyEnrollmentStatus])
+
+  const checkAcademyEnrollmentStatus = async () => {
+    if (!academy?.id || !studentId) return
+
+    try {
+      const response = await StudentApi.getAcademyEnrollmentStatus(studentId, academy.id)
+      if (response.data) {
+        setAcademyEnrollmentStatus(response.data.status)
+      } else {
+        setAcademyEnrollmentStatus(null)
+      }
+    } catch (error) {
+      console.error('Error checking academy enrollment status:', error)
+      setAcademyEnrollmentStatus(null)
+    }
+  }
 
   const checkEnrollmentStatuses = async () => {
     if (!academy?.batches || !studentId) return
@@ -117,6 +146,37 @@ export const StudentAcademyDetailModal: React.FC<StudentAcademyDetailModalProps>
       console.error('Error requesting to join academy:', error)
     } finally {
       setRequestingJoin(false)
+    }
+  }
+
+  const handleRequestToJoinAcademy = async () => {
+    if (!studentId || !academy?.id) {
+      setError('Student ID or Academy ID not found')
+      return
+    }
+
+    setRequestingAcademyJoin(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      const response = await StudentApi.requestToJoinAcademy(studentId, academy.id)
+      
+      if (response.error) {
+        setError(response.error)
+      } else {
+        setSuccess('Academy enrollment request submitted successfully!')
+        setAcademyEnrollmentStatus('pending')
+        // Refresh enrollment status after a delay
+        setTimeout(() => {
+          checkAcademyEnrollmentStatus()
+        }, 1000)
+      }
+    } catch (error) {
+      setError('Failed to submit enrollment request. Please try again.')
+      console.error('Error requesting to join academy:', error)
+    } finally {
+      setRequestingAcademyJoin(false)
     }
   }
 
@@ -319,91 +379,115 @@ export const StudentAcademyDetailModal: React.FC<StudentAcademyDetailModalProps>
               </div>
             )}
 
-            {/* Student: Available Batches */}
+            {/* Student: Request to Join Academy */}
             {userRole === 'student' && (
-            <div>
-              <h3 className="text-lg font-bold text-[#0F1717] mb-4">Available Batches</h3>
-              {academy.batches && academy.batches.length > 0 ? (
-                <div className="space-y-4">
-                  {academy.batches.map((batch: any) => {
-                    const status = enrollmentStatuses[batch.id]
-                    const isPending = status === 'pending'
-                    const isActive = status === 'active'
-                    const isRejected = status === 'rejected'
-                    const canEnroll = !status && batch.available_slots > 0
+              <div className="mb-6">
+                <div className="border border-[#DBE5E0] rounded-lg p-6 bg-[#F7FCFA]">
+                  <h3 className="text-lg font-bold text-[#0F1717] mb-4">Join This Academy</h3>
+                  <p className="text-sm text-[#5E8C7D] mb-4">
+                    Request to join this academy as a student. The academy owner will review your request and assign you to appropriate batches.
+                  </p>
+                  
+                  {academyEnrollmentStatus === 'pending' && (
+                    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-sm text-yellow-800">
+                        Your request is pending approval from the academy owner.
+                      </p>
+                    </div>
+                  )}
+                  
+                  {academyEnrollmentStatus === 'approved' && (
+                    <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-sm text-green-800">
+                        You are approved for this academy! The academy will assign you to batches.
+                      </p>
+                    </div>
+                  )}
+                  
+                  {academyEnrollmentStatus === 'rejected' && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-sm text-red-800">
+                        Your request was rejected. Please contact the academy for more information.
+                      </p>
+                    </div>
+                  )}
+                  
+                  {!academyEnrollmentStatus && (
+                    <button
+                      onClick={handleRequestToJoinAcademy}
+                      disabled={requestingAcademyJoin}
+                      className="w-full px-4 py-3 bg-[#009963] text-white rounded-lg hover:bg-[#007a4f] transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {requestingAcademyJoin ? 'Submitting Request...' : 'Request to Join Academy'}
+                    </button>
+                  )}
+                </div>
 
-                    return (
-                      <div
-                        key={batch.id}
-                        className="border border-[#DBE5E0] rounded-lg p-4"
-                      >
-                        <div className="flex justify-between items-start mb-3">
-                          <div className="flex-1">
-                            <h4 className="text-base font-bold text-[#0F1717] mb-1">
-                              {batch.name}
-                            </h4>
-                            {batch.skill && (
-                              <p className="text-sm text-[#5E8C7D] mb-2">
-                                Skill: {batch.skill.name}
-                              </p>
-                            )}
-                            {batch.teacher && (
-                              <p className="text-sm text-[#5E8C7D] mb-2">
-                                Teacher: {batch.teacher.full_name}
-                              </p>
-                            )}
-                            <div className="flex items-center gap-4 text-sm text-[#5E8C7D]">
-                              <span>
-                                {formatDate(batch.start_date)} - {formatDate(batch.end_date)}
-                              </span>
-                              <span>
-                                {batch.available_slots} slots available
-                              </span>
+                {/* Show batches only if student is approved */}
+                {academyEnrollmentStatus === 'approved' && (
+                  <div className="mt-6">
+                    <h3 className="text-lg font-bold text-[#0F1717] mb-4">Your Assigned Batches</h3>
+                    {academy.batches && academy.batches.length > 0 ? (
+                      <div className="space-y-4">
+                        {academy.batches.map((batch: any) => {
+                          const status = enrollmentStatuses[batch.id]
+                          const isActive = status === 'active'
+
+                          return (
+                            <div
+                              key={batch.id}
+                              className="border border-[#DBE5E0] rounded-lg p-4"
+                            >
+                              <div className="flex justify-between items-start mb-3">
+                                <div className="flex-1">
+                                  <h4 className="text-base font-bold text-[#0F1717] mb-1">
+                                    {batch.name}
+                                  </h4>
+                                  {batch.skill && (
+                                    <p className="text-sm text-[#5E8C7D] mb-2">
+                                      Skill: {batch.skill.name}
+                                    </p>
+                                  )}
+                                  {batch.teacher && (
+                                    <p className="text-sm text-[#5E8C7D] mb-2">
+                                      Teacher: {batch.teacher.full_name}
+                                    </p>
+                                  )}
+                                  <div className="flex items-center gap-4 text-sm text-[#5E8C7D]">
+                                    <span>
+                                      {formatDate(batch.start_date)} - {formatDate(batch.end_date)}
+                                    </span>
+                                    <span>
+                                      {batch.available_slots} slots available
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="ml-4">
+                                  {getStatusBadge(batch.id)}
+                                </div>
+                              </div>
+                              {isActive && (
+                                <p className="text-sm text-green-600 text-center">
+                                  You are enrolled in this batch
+                                </p>
+                              )}
+                              {!isActive && (
+                                <p className="text-sm text-gray-500 text-center">
+                                  Waiting for batch assignment from academy
+                                </p>
+                              )}
                             </div>
-                          </div>
-                          <div className="ml-4">
-                            {getStatusBadge(batch.id)}
-                          </div>
-                        </div>
-                        {canEnroll && (
-                          <button
-                            onClick={() => handleEnroll(batch.id)}
-                            disabled={enrollingBatchId === batch.id}
-                            className="w-full px-4 py-2 bg-[#009963] text-white rounded-lg hover:bg-[#007a4f] transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {enrollingBatchId === batch.id ? 'Submitting...' : 'Request Enrollment'}
-                          </button>
-                        )}
-                        {isPending && (
-                          <p className="text-sm text-yellow-600 text-center">
-                            Your enrollment request is pending approval
-                          </p>
-                        )}
-                        {isActive && (
-                          <p className="text-sm text-green-600 text-center">
-                            You are enrolled in this batch
-                          </p>
-                        )}
-                        {isRejected && (
-                          <p className="text-sm text-red-600 text-center">
-                            Your enrollment request was rejected
-                          </p>
-                        )}
-                        {!canEnroll && !status && batch.available_slots === 0 && (
-                          <p className="text-sm text-gray-500 text-center">
-                            Batch is full
-                          </p>
-                        )}
+                          )
+                        })}
                       </div>
-                    )
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-[#5E8C7D]">
-                  <p>No available batches at this time</p>
-                </div>
-              )}
-            </div>
+                    ) : (
+                      <div className="text-center py-8 text-[#5E8C7D]">
+                        <p>No batches available at this time. The academy will assign you to batches after approval.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
           </div>
 

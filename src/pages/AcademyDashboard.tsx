@@ -122,7 +122,7 @@ const AcademyDashboard = () => {
         AdminApi.getAcademyBatches(academyResponse.data.id),
         AdminApi.getAcademyStudentScores(academyResponse.data.id),
         AdminApi.getAcademyBatchEnrollments(academyResponse.data.id),
-        AdminApi.getPendingBatchEnrollments(academyResponse.data.id)
+        AdminApi.getPendingEnrollments(academyResponse.data.id)
       ])
 
       // Set data if available (don't fail on individual errors)
@@ -897,12 +897,12 @@ const AcademyDashboard = () => {
           {/* Batches Tab */}
           {activeTab === 'batches' && (
             <div className="flex px-4 flex-col items-start self-stretch gap-4">
-              {/* Enrollment Requests Section */}
+              {/* Academy Enrollment Requests Section */}
               {pendingEnrollments.length > 0 && (
                 <div className="flex p-4 flex-col justify-center items-start gap-4 self-stretch bg-white border border-[#DBE5E0] rounded-xl">
                   <div className="flex px-4 py-3 justify-between items-center self-stretch">
                     <span className="text-[22px] font-bold text-[#0F1717] leading-7">
-                      Pending Enrollment Requests ({pendingEnrollments.length})
+                      Pending Academy Enrollment Requests ({pendingEnrollments.length})
                     </span>
                   </div>
                   <div className="w-full">
@@ -913,7 +913,7 @@ const AcademyDashboard = () => {
                             Student
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Batch
+                            Details
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Request Date
@@ -934,46 +934,39 @@ const AcademyDashboard = () => {
                                 {enrollment.student?.email || 'N/A'}
                               </div>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">
-                                {enrollment.batch?.name || 'N/A'}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {enrollment.batch?.skill?.name || 'N/A'}
+                            <td className="px-6 py-4">
+                              <div className="text-sm text-gray-900 space-y-1">
+                                {enrollment.student?.date_of_birth && (
+                                  <div>
+                                    <span className="font-medium">DOB:</span>{' '}
+                                    {new Date(enrollment.student.date_of_birth).toLocaleDateString()}
+                                  </div>
+                                )}
+                                {enrollment.student?.school_name && (
+                                  <div>
+                                    <span className="font-medium">School:</span> {enrollment.student.school_name}
+                                  </div>
+                                )}
+                                {enrollment.student?.location && (
+                                  <div>
+                                    <span className="font-medium">Location:</span> {enrollment.student.location}
+                                  </div>
+                                )}
                               </div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {new Date(enrollment.enrolled_at).toLocaleDateString()}
+                              {new Date(enrollment.created_at).toLocaleDateString()}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                               <div className="flex justify-end gap-2">
                                 <button
-                                  onClick={async () => {
-                                    const response = await AdminApi.approveBatchEnrollment(enrollment.id)
-                                    if (!response.error) {
-                                      fetchAcademyData()
-                                    } else {
-                                      alert('Failed to approve enrollment: ' + response.error)
-                                    }
+                                  onClick={() => {
+                                    setSelectedStudent(enrollment)
+                                    setShowStudentModal(true)
                                   }}
-                                  className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                                  className="px-3 py-1 bg-[#009963] text-white rounded hover:bg-[#007a4f] transition-colors"
                                 >
-                                  Approve
-                                </button>
-                                <button
-                                  onClick={async () => {
-                                    if (confirm('Are you sure you want to reject this enrollment request?')) {
-                                      const response = await AdminApi.rejectBatchEnrollment(enrollment.id)
-                                      if (!response.error) {
-                                        fetchAcademyData()
-                                      } else {
-                                        alert('Failed to reject enrollment: ' + response.error)
-                                      }
-                                    }
-                                  }}
-                                  className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                                >
-                                  Reject
+                                  Review & Assign
                                 </button>
                               </div>
                             </td>

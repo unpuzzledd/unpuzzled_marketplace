@@ -15,22 +15,43 @@ export class StudentApi {
   /**
    * Get all batches the student is enrolled in
    * Returns batches with skill, academy, and teacher information
+   * Only returns batches from academies where student has approved enrollment
    */
   static async getMyBatches(studentId: string): Promise<ApiResponse<any[]>> {
     try {
+      // First get all approved academy enrollments
+      const { data: academyEnrollments, error: academyError } = await supabase
+        .from('student_enrollments')
+        .select('academy_id')
+        .eq('student_id', studentId)
+        .eq('status', 'approved')
+
+      if (academyError) {
+        return { data: null, error: academyError.message }
+      }
+
+      // If no approved academies, return empty array
+      if (!academyEnrollments || academyEnrollments.length === 0) {
+        return { data: [], error: null }
+      }
+
+      const approvedAcademyIds = academyEnrollments.map(e => e.academy_id)
+
+      // Get batch enrollments for batches in approved academies
       const { data, error } = await supabase
         .from('batch_enrollments')
         .select(`
           id,
           enrolled_at,
           status,
-          batch:batches (
+          batch:batches!inner (
             id,
             name,
             start_date,
             end_date,
             status,
             max_students,
+            academy_id,
             skill:skills (
               id,
               name,
@@ -48,6 +69,7 @@ export class StudentApi {
           )
         `)
         .eq('student_id', studentId)
+        .in('batch.academy_id', approvedAcademyIds)
         .order('enrolled_at', { ascending: false })
 
       if (error) {
@@ -572,9 +594,37 @@ export class StudentApi {
 
   /**
    * Enroll student in a batch
+   * NOTE: Students should request academy enrollment first, then academy assigns batches
+   * This method is kept for backward compatibility but should primarily be used by academy owners
    */
   static async enrollInBatch(studentId: string, batchId: string): Promise<ApiResponse<any>> {
     try {
+      // Get batch to find academy_id
+      const { data: batch, error: batchError } = await supabase
+        .from('batches')
+        .select('id, academy_id, max_students')
+        .eq('id', batchId)
+        .single()
+
+      if (batchError || !batch) {
+        return { data: null, error: 'Batch not found' }
+      }
+
+      // Check if student is approved for the academy
+      const { data: academyEnrollment } = await supabase
+        .from('student_enrollments')
+        .select('status')
+        .eq('student_id', studentId)
+        .eq('academy_id', batch.academy_id)
+        .single()
+
+      if (!academyEnrollment || academyEnrollment.status !== 'approved') {
+        return { 
+          data: null, 
+          error: 'You must be approved by the academy first. Please request to join the academy.' 
+        }
+      }
+
       // Check if already enrolled (any status)
       const { data: existingEnrollment } = await supabase
         .from('batch_enrollments')
@@ -597,19 +647,13 @@ export class StudentApi {
       }
 
       // Check if batch is full (only count active enrollments)
-      const { data: batch } = await supabase
-        .from('batches')
-        .select('max_students')
-        .eq('id', batchId)
-        .single()
-
       const { count: enrolledCount } = await supabase
         .from('batch_enrollments')
         .select('id', { count: 'exact', head: true })
         .eq('batch_id', batchId)
         .eq('status', 'active')
 
-      if (batch && enrolledCount && enrolledCount >= batch.max_students) {
+      if (batch.max_students && enrolledCount && enrolledCount >= batch.max_students) {
         return { data: null, error: 'Batch is full' }
       }
 
@@ -1030,6 +1074,117 @@ export class StudentApi {
       return { data: data || [], error: null }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to get enrollment requests'
+      return { data: null, error: errorMessage }
+    }
+  }
+
+  // =============================================
+  // ACADEMY ENROLLMENT MANAGEMENT
+  // =============================================
+
+  /**
+   * Request to join an academy
+   * Similar to TeacherApi.requestToJoinAcademy()
+   */
+  static async requestToJoinAcademy(studentId: string, academyId: string): Promise<ApiResponse<any>> {
+    try {
+      // Check if enrollment already exists
+      const { data: existingEnrollment } = await supabase
+        .from('student_enrollments')
+        .select('id, status')
+        .eq('student_id', studentId)
+        .eq('academy_id', academyId)
+        .single()
+
+      if (existingEnrollment) {
+        if (existingEnrollment.status === 'pending') {
+          return { data: null, error: 'Request already pending' }
+        }
+        if (existingEnrollment.status === 'approved') {
+          return { data: null, error: 'Already approved for this academy' }
+        }
+        if (existingEnrollment.status === 'rejected') {
+          return { data: null, error: 'Your request was rejected. Please contact the academy.' }
+        }
+      }
+
+      const { data, error } = await supabase
+        .from('student_enrollments')
+        .insert({
+          student_id: studentId,
+          academy_id: academyId,
+          status: 'pending',
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single()
+
+      if (error) {
+        return { data: null, error: error.message }
+      }
+
+      return { data, error: null }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to request to join academy'
+      return { data: null, error: errorMessage }
+    }
+  }
+
+  /**
+   * Get all academy enrollments for a student
+   * Returns enrollments with academy details and status
+   */
+  static async getMyAcademyEnrollments(studentId: string): Promise<ApiResponse<any[]>> {
+    try {
+      const { data, error } = await supabase
+        .from('student_enrollments')
+        .select(`
+          *,
+          academy:academies (
+            id,
+            name,
+            phone_number,
+            photo_urls,
+            status
+          )
+        `)
+        .eq('student_id', studentId)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        return { data: null, error: error.message }
+      }
+
+      return { data: data || [], error: null }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get academy enrollments'
+      return { data: null, error: errorMessage }
+    }
+  }
+
+  /**
+   * Get academy enrollment status for a specific academy
+   */
+  static async getAcademyEnrollmentStatus(studentId: string, academyId: string): Promise<ApiResponse<any>> {
+    try {
+      const { data, error } = await supabase
+        .from('student_enrollments')
+        .select('*')
+        .eq('student_id', studentId)
+        .eq('academy_id', academyId)
+        .single()
+
+      if (error) {
+        // If no enrollment found, return null status
+        if (error.code === 'PGRST116') {
+          return { data: null, error: null }
+        }
+        return { data: null, error: error.message }
+      }
+
+      return { data, error: null }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get academy enrollment status'
       return { data: null, error: errorMessage }
     }
   }
