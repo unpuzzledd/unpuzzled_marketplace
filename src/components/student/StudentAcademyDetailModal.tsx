@@ -22,7 +22,6 @@ export const StudentAcademyDetailModal: React.FC<StudentAcademyDetailModalProps>
   userRole = 'student'
 }) => {
   const navigate = useNavigate()
-  const [enrollingBatchId, setEnrollingBatchId] = useState<string | null>(null)
   const [enrollmentStatuses, setEnrollmentStatuses] = useState<Record<string, string>>({})
   const [assignmentStatus, setAssignmentStatus] = useState<string | null>(null)
   const [academyEnrollmentStatus, setAcademyEnrollmentStatus] = useState<string | null>(null)
@@ -180,36 +179,6 @@ export const StudentAcademyDetailModal: React.FC<StudentAcademyDetailModalProps>
     }
   }
 
-  const handleEnroll = async (batchId: string) => {
-    if (!studentId) {
-      setError('Student ID not found')
-      return
-    }
-
-    setEnrollingBatchId(batchId)
-    setError(null)
-    setSuccess(null)
-
-    try {
-      const response = await StudentApi.enrollInBatch(studentId, batchId)
-      
-      if (response.error) {
-        setError(response.error)
-      } else {
-        setSuccess('Enrollment request submitted successfully!')
-        setEnrollmentStatuses(prev => ({ ...prev, [batchId]: 'pending' }))
-        // Refresh enrollment statuses after a delay
-        setTimeout(() => {
-          checkEnrollmentStatuses()
-        }, 1000)
-      }
-    } catch (error) {
-      setError('Failed to submit enrollment request. Please try again.')
-      console.error('Error enrolling in batch:', error)
-    } finally {
-      setEnrollingBatchId(null)
-    }
-  }
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)

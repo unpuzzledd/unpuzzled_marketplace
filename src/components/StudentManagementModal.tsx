@@ -13,6 +13,10 @@ interface StudentManagementModalProps {
       id: string;
       full_name: string;
       email: string;
+      date_of_birth?: string | null;
+      school_name?: string | null;
+      location?: string | null;
+      [key: string]: any; // Allow additional properties from API
     } | null;
   };
   onStudentUpdated: () => void;
@@ -299,7 +303,7 @@ export const StudentManagementModal: React.FC<StudentManagementModalProps> = ({
                       {student.status}
                     </span>
                   </div>
-                  {student.student.date_of_birth && (
+                  {student.student?.date_of_birth && (
                     <div className="text-sm text-[#0F1717]">
                       <span className="font-medium">Date of Birth:</span>{' '}
                       <span className="text-[#5E8C7D]">
@@ -311,13 +315,13 @@ export const StudentManagementModal: React.FC<StudentManagementModalProps> = ({
                       </span>
                     </div>
                   )}
-                  {student.student.school_name && (
+                  {student.student?.school_name && (
                     <div className="text-sm text-[#0F1717]">
                       <span className="font-medium">School:</span>{' '}
                       <span className="text-[#5E8C7D]">{student.student.school_name}</span>
                     </div>
                   )}
-                  {student.student.location && (
+                  {student.student?.location && (
                     <div className="text-sm text-[#0F1717]">
                       <span className="font-medium">Location:</span>{' '}
                       <span className="text-[#5E8C7D]">{student.student.location}</span>
