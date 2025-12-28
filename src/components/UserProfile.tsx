@@ -35,8 +35,8 @@ export const UserProfile: React.FC<UserProfileProps> = ({ onSuccess }) => {
 
     try {
       const result = await updateUserProfile({
-        full_name: formData.full_name.trim() || null,
-        phone_number: formData.phone_number.trim() || null
+        full_name: formData.full_name.trim() || undefined,
+        phone_number: formData.phone_number.trim() || undefined
       });
 
       if (result.success) {

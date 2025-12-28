@@ -8,7 +8,7 @@ import { StudentManagementModal } from '../components/StudentManagementModal'
 import { BatchManagementModal } from '../components/BatchManagementModal'
 import { AcademySetupForm } from '../components/AcademySetupForm'
 import { AcademyProfileManagement } from '../components/AcademyProfileManagement'
-import { generateUpcomingClasses, mergeScheduleWithExceptions, formatScheduleTime, getDayName } from '../utils/scheduleUtils'
+import { generateUpcomingClasses, formatScheduleTime, getDayName } from '../utils/scheduleUtils'
 
 const AcademyDashboard = () => {
   const [showAddActivityModal, setShowAddActivityModal] = useState(false)

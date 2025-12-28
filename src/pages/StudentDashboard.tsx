@@ -19,7 +19,6 @@ const StudentDashboard = () => {
   
   // Data State
   const [batches, setBatches] = useState<any[]>([])
-  const [activities, setActivities] = useState<any[]>([])
   const [activitiesWithSchedule, setActivitiesWithSchedule] = useState<any[]>([])
   const [statistics, setStatistics] = useState<any>(null)
   const [dataLoading, setDataLoading] = useState(true)
@@ -107,8 +106,6 @@ const StudentDashboard = () => {
 
         if (batchesRes.data) setBatches(batchesRes.data)
         if (activitiesRes.data) {
-          setActivities(activitiesRes.data)
-          
           // Fetch schedule exceptions for each batch and merge schedules
           const enrichedActivities = await Promise.all(
             activitiesRes.data.map(async (activity: any) => {

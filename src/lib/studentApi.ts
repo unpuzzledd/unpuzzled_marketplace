@@ -765,7 +765,7 @@ export class StudentApi {
    * Mark a topic as complete for a student
    * This can be used to track when students complete/view topics
    */
-  static async markTopicComplete(topicId: string, studentId: string): Promise<ApiResponse<void>> {
+  static async markTopicComplete(_topicId: string, _studentId: string): Promise<ApiResponse<void>> {
     try {
       // For now, we'll just return success
       // In the future, you might want to create a topic_completions table:

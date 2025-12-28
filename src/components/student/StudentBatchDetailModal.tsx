@@ -29,7 +29,6 @@ export const StudentBatchDetailModal = ({
   const [showViewTopic, setShowViewTopic] = useState(false)
   const [selectedTopic, setSelectedTopic] = useState<any>(null)
   const [mergedSchedule, setMergedSchedule] = useState<any[]>([])
-  const [scheduleExceptions, setScheduleExceptions] = useState<ScheduleException[]>([])
 
   useEffect(() => {
     const fetchBatchData = async () => {
@@ -49,7 +48,6 @@ export const StudentBatchDetailModal = ({
         if (topicsRes.data) setTopics(topicsRes.data)
         if (scoreRes.data) setScore(scoreRes.data)
         if (rankRes.data) setRank(rankRes.data)
-        if (exceptionsRes.data) setScheduleExceptions(exceptionsRes.data)
 
         // Merge schedule with exceptions (limit to next 7 days)
         const batchData = detailsRes.data || batch
