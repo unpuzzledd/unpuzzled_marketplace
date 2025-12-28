@@ -3,7 +3,6 @@ import { XMarkIcon } from '@heroicons/react/24/outline'
 import { StudentApi } from '../../lib/studentApi'
 import { ViewTopic } from '../../pages/ViewTopic'
 import { mergeScheduleWithExceptions, formatScheduleTime, getDayName } from '../../utils/scheduleUtils'
-import { ScheduleException } from '../../types/database'
 
 interface StudentBatchDetailModalProps {
   isOpen: boolean
