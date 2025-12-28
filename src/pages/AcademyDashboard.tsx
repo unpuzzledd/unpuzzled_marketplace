@@ -8,6 +8,7 @@ import { StudentManagementModal } from '../components/StudentManagementModal'
 import { BatchManagementModal } from '../components/BatchManagementModal'
 import { AcademySetupForm } from '../components/AcademySetupForm'
 import { AcademyProfileManagement } from '../components/AcademyProfileManagement'
+import { generateUpcomingClasses, mergeScheduleWithExceptions, formatScheduleTime, getDayName } from '../utils/scheduleUtils'
 
 const AcademyDashboard = () => {
   const [showAddActivityModal, setShowAddActivityModal] = useState(false)
@@ -682,48 +683,129 @@ const AcademyDashboard = () => {
             </div>
           </div>
 
-          {/* All Activity Section */}
+          {/* Batches Section */}
           <div className="flex px-4 flex-col items-start self-stretch">
             <div className="flex p-4 flex-col justify-center items-start gap-4 self-stretch bg-white border border-[#DBE5E0] rounded-xl">
               <div className="flex px-4 py-3 justify-between items-center self-stretch">
-                <span className="text-[22px] font-bold text-[#0F1717] leading-7">All Activity</span>
+                <span className="text-[22px] font-bold text-[#0F1717] leading-7">All Batches</span>
                 <button 
-                  onClick={() => setShowAddActivityModal(true)}
-                  className="flex h-8 min-w-[84px] max-w-[480px] px-4 justify-center items-center bg-[#F0F5F2] rounded-lg"
+                  onClick={() => {
+                    setSelectedBatch(null)
+                    setShowBatchModal(true)
+                  }}
+                  className="flex h-8 min-w-[84px] max-w-[480px] px-4 justify-center items-center bg-[#009963] text-white rounded-lg hover:bg-[#007a4f] transition-colors"
                 >
-                  <span className="text-sm text-[#0F1717] leading-[21px] overflow-hidden text-ellipsis whitespace-nowrap text-center">+ Add Activity</span>
+                  <span className="text-sm leading-[21px] overflow-hidden text-ellipsis whitespace-nowrap text-center">+ Add Batch</span>
                 </button>
               </div>
               
               <div className="flex items-start self-stretch gap-4 overflow-x-auto pb-2">
-                    {activities.length > 0 ? (
-                      activities.map((activity) => (
-                        <div key={activity.id} className="flex w-[280px] px-4 flex-col items-start flex-shrink-0">
-                          <div className="flex flex-col justify-center items-center self-stretch rounded-xl">
-                            <img 
-                              src={activity.image} 
-                              alt={activity.name} 
-                              className="h-[157px] self-stretch rounded-xl object-cover"
-                            />
-                            <div className="flex h-[101px] flex-col justify-center items-center gap-4 self-stretch">
-                              <span className="text-base font-bold text-[#0F1717] leading-5">{activity.name}</span>
+                    {batches.length > 0 ? (
+                      batches.map((batch) => {
+                        // Get upcoming classes for this week
+                        const today = new Date()
+                        today.setHours(0, 0, 0, 0)
+                        const nextWeekEnd = new Date(today)
+                        nextWeekEnd.setDate(today.getDate() + 7)
+                        
+                        let upcomingClasses: any[] = []
+                        if (batch.weekly_schedule && batch.start_date && batch.end_date) {
+                          const endDate = new Date(batch.end_date) < nextWeekEnd 
+                            ? batch.end_date 
+                            : nextWeekEnd.toISOString().split('T')[0]
+                          
+                          // Generate upcoming classes (will merge with exceptions if needed)
+                          const classes = generateUpcomingClasses(
+                            batch.weekly_schedule,
+                            batch.start_date,
+                            endDate
+                          )
+                          
+                          // Filter to next 7 days and limit to 7 classes
+                          upcomingClasses = classes
+                            .filter(cls => {
+                              const classDate = new Date(cls.date)
+                              classDate.setHours(0, 0, 0, 0)
+                              return classDate >= today && classDate <= nextWeekEnd
+                            })
+                            .slice(0, 7) // Limit to 7 classes
+                        }
+                        
+                        // Get teacher info
+                        const teacher = batch.teacher
+                        const skill = batch.skill
+                        
+                        return (
+                          <div key={batch.id} className="flex w-[320px] px-4 flex-col items-start flex-shrink-0">
+                            <div className="flex flex-col justify-start items-start self-stretch rounded-xl border border-[#DBE5E0] bg-white p-4">
+                              {/* Batch Name */}
+                              <div className="w-full mb-3">
+                                <h3 className="text-lg font-bold text-[#0F1717] leading-6 mb-1">{batch.name}</h3>
+                                {skill && (
+                                  <p className="text-sm text-[#5E8C7D] mb-2">Skill: {skill.name}</p>
+                                )}
+                              </div>
+                              
+                              {/* Teacher Information */}
+                              <div className="w-full mb-3 pb-3 border-b border-[#E5E8EB]">
+                                <p className="text-xs text-[#5E8C7D] mb-1">Teacher:</p>
+                                {teacher ? (
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 bg-[#5E8C7D] rounded-full flex items-center justify-center flex-shrink-0">
+                                      <span className="text-white font-bold text-xs">
+                                        {teacher.full_name?.charAt(0).toUpperCase() || 'T'}
+                                      </span>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium text-[#0F1717] truncate">{teacher.full_name || 'Unknown'}</p>
+                                      <p className="text-xs text-[#5E8C7D] truncate">{teacher.email}</p>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <p className="text-xs text-[#5E8C7D] italic">No teacher assigned</p>
+                                )}
+                              </div>
+                              
+                              {/* Upcoming Classes */}
+                              <div className="w-full">
+                                <p className="text-xs text-[#5E8C7D] mb-2">Upcoming Classes This Week:</p>
+                                {upcomingClasses.length > 0 ? (
+                                  <div className="space-y-1 max-h-[120px] overflow-y-auto">
+                                    {upcomingClasses.map((cls, idx) => {
+                                      const classDate = new Date(cls.date)
+                                      return (
+                                        <div key={idx} className="text-xs text-[#0F1717] bg-[#F0F5F2] rounded px-2 py-1">
+                                          {getDayName(cls.day)}, {classDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}: {formatScheduleTime(cls.from_time)} - {formatScheduleTime(cls.to_time)}
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                ) : (
+                                  <p className="text-xs text-[#5E8C7D] italic">No classes scheduled</p>
+                                )}
+                              </div>
+                              
+                              {/* Manage Button */}
                               <button 
-                                onClick={() => setActiveTab('profile')}
-                                className="flex h-8 min-w-[84px] max-w-[480px] px-4 justify-center items-center flex-shrink-0 bg-[#F0F5F2] rounded-2xl hover:bg-[#E5F5F0] transition-colors"
+                                onClick={() => {
+                                  setSelectedBatch(batch)
+                                  setShowBatchModal(true)
+                                }}
+                                className="w-full mt-4 flex h-8 px-4 justify-center items-center bg-[#F0F5F2] rounded-lg hover:bg-[#E5F5F0] transition-colors"
                               >
-                                <span className="text-sm text-[#0F1717] leading-[21px] overflow-hidden text-ellipsis whitespace-nowrap text-center">Manage</span>
+                                <span className="text-sm text-[#0F1717] leading-[21px]">Manage</span>
                               </button>
                             </div>
                           </div>
-                        </div>
-                      ))
+                        )
+                      })
                     ) : (
                       <div className="flex w-[280px] px-4 flex-col items-start flex-shrink-0">
                         <div className="flex flex-col justify-center items-center self-stretch rounded-xl bg-[#F0F5F2] h-[258px]">
                           <div className="text-center">
                             <div className="text-4xl mb-2">📚</div>
-                            <p className="text-sm text-[#5E8C7D]">No activities yet</p>
-                            <p className="text-xs text-[#5E8C7D] mt-1">Add your first activity</p>
+                            <p className="text-sm text-[#5E8C7D]">No batches yet</p>
+                            <p className="text-xs text-[#5E8C7D] mt-1">Create your first batch</p>
                           </div>
                         </div>
                       </div>
@@ -731,11 +813,14 @@ const AcademyDashboard = () => {
                 
                 <div className="flex w-[280px] px-4 flex-col items-start flex-shrink-0">
                   <button
-                    onClick={() => setShowAddActivityModal(true)}
+                    onClick={() => {
+                      setSelectedBatch(null)
+                      setShowBatchModal(true)
+                    }}
                     className="flex px-[69px] pt-16 pb-20 flex-col items-center gap-[29px] self-stretch bg-[#F0F5F2] rounded-xl relative hover:bg-[#E5F5F0] transition-colors cursor-pointer w-full"
                   >
                     <div className="text-[89px] font-thin text-[#0F1717] text-center overflow-hidden text-ellipsis whitespace-nowrap opacity-50 absolute left-26 top-16 w-[52px] h-16 flex justify-center items-center">+</div>
-                    <div className="text-sm text-[#0F1717] leading-[21px] text-center overflow-hidden text-ellipsis absolute left-[82px] top-[157px] w-[97px] h-[21px]">Add Activity</div>
+                    <div className="text-sm text-[#0F1717] leading-[21px] text-center overflow-hidden text-ellipsis absolute left-[82px] top-[157px] w-[97px] h-[21px]">Add Batch</div>
                   </button>
                 </div>
               </div>
@@ -750,9 +835,6 @@ const AcademyDashboard = () => {
               <div className="flex p-4 flex-col justify-center items-start gap-4 self-stretch bg-white border border-[#DBE5E0] rounded-xl">
                 <div className="flex px-4 py-3 justify-between items-center self-stretch">
                   <span className="text-[22px] font-bold text-[#0F1717] leading-7">Teachers ({teachers.length})</span>
-                  <button className="flex h-8 min-w-[84px] max-w-[480px] px-4 justify-center items-center bg-[#F0F5F2] rounded-lg">
-                    <span className="text-sm text-[#0F1717] leading-[21px] overflow-hidden text-ellipsis whitespace-nowrap text-center">+ Add Teacher</span>
-                  </button>
                 </div>
                 
                 <div className="space-y-4 p-4">
@@ -1177,10 +1259,10 @@ const AcademyDashboard = () => {
           )}
         </div>
 
-        {/* Upcoming Activities Sidebar */}
+        {/* Activities Offered Sidebar */}
         <div className="w-[142px] pt-[100px] pl-[5px]">
           <div className="flex w-[142px] p-3 flex-col items-start bg-[#F7FCFA] rounded-xl h-[188px]">
-            <span className="text-sm font-medium text-[#0D1C17] leading-[21px] mb-3">Upcoming Activities</span>
+            <span className="text-sm font-medium text-[#0D1C17] leading-[21px] mb-3">Activities Offered</span>
             {upcomingActivities.map((activity, index) => (
               <div key={index} className="flex p-2.5 px-4 items-center gap-2.5 self-stretch bg-[#F7FCFA]">
                 <span className="text-sm text-[#0D1C17] leading-[21px]">{activity}</span>

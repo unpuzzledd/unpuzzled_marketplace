@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth'
 import { StudentApi } from '../lib/studentApi'
 import { StudentBatchDetailModal } from '../components/student/StudentBatchDetailModal'
 import { ViewTopic } from './ViewTopic'
+import { mergeScheduleWithExceptions, formatScheduleTime, getDayName } from '../utils/scheduleUtils'
 
 const StudentDashboard = () => {
   const { user, loading, signOut } = useAuth()
@@ -12,12 +13,14 @@ const StudentDashboard = () => {
   
   // UI State
   const [selectedCourse, setSelectedCourse] = useState('all')
+  const [selectedActivityBatch, setSelectedActivityBatch] = useState('all')
   const [activeNav, setActiveNav] = useState('Home')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   
   // Data State
   const [batches, setBatches] = useState<any[]>([])
   const [activities, setActivities] = useState<any[]>([])
+  const [activitiesWithSchedule, setActivitiesWithSchedule] = useState<any[]>([])
   const [statistics, setStatistics] = useState<any>(null)
   const [dataLoading, setDataLoading] = useState(true)
   const [selectedBatch, setSelectedBatch] = useState<any>(null)
@@ -52,6 +55,7 @@ const StudentDashboard = () => {
     },
     {
       name: 'Settings',
+      comingSoon: false,
       icon: (
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path fillRule="evenodd" clipRule="evenodd" d="M9.81006 5.31055C7.32478 5.31055 5.31006 7.32527 5.31006 9.81055C5.31006 12.2958 7.32478 14.3105 9.81006 14.3105C12.2953 14.3105 14.3101 12.2958 14.3101 9.81055C14.3075 7.32634 12.2943 5.31313 9.81006 5.31055ZM9.81006 12.8105C8.1532 12.8105 6.81006 11.4674 6.81006 9.81055C6.81006 8.15369 8.1532 6.81055 9.81006 6.81055C11.4669 6.81055 12.8101 8.15369 12.8101 9.81055C12.8101 11.4674 11.4669 12.8105 9.81006 12.8105ZM18.0601 10.013C18.0638 9.87805 18.0638 9.74305 18.0601 9.60805L19.4588 7.86055C19.6075 7.67448 19.659 7.42881 19.5976 7.19867C19.3683 6.33674 19.0252 5.50916 18.5776 4.73773C18.4587 4.53304 18.2502 4.39647 18.0151 4.3693L15.7913 4.1218C15.6988 4.0243 15.6051 3.93055 15.5101 3.84055L15.2476 1.61117C15.2202 1.37586 15.0832 1.16731 14.8782 1.04867C14.1065 0.60181 13.279 0.259142 12.4172 0.0296094C12.187 -0.0316167 11.9413 0.0202336 11.7554 0.169297L10.0126 1.56055C9.87756 1.56055 9.74256 1.56055 9.60756 1.56055L7.86006 0.164609C7.67399 0.0158727 7.42832 -0.0356262 7.19818 0.0258594C6.33639 0.255572 5.50886 0.598562 4.73725 1.04586C4.53255 1.16472 4.39598 1.37323 4.36881 1.60836L4.12131 3.83586C4.02381 3.92898 3.93006 4.02273 3.84006 4.11711L1.61068 4.37305C1.37537 4.40042 1.16682 4.53737 1.04818 4.74242C0.601321 5.51414 0.258653 6.34165 0.0291212 7.20336C-0.032105 7.43365 0.0197453 7.67933 0.168809 7.86523L1.56006 9.60805C1.56006 9.74305 1.56006 9.87805 1.56006 10.013L0.164121 11.7605C0.0153844 11.9466 -0.0361145 12.1923 0.0253711 12.4224C0.254674 13.2844 0.597686 14.1119 1.04537 14.8834C1.16423 15.0881 1.37274 15.2246 1.60787 15.2518L3.83162 15.4993C3.92475 15.5968 4.0185 15.6905 4.11287 15.7805L4.37256 18.0099C4.39994 18.2452 4.53688 18.4538 4.74193 18.5724C5.51365 19.0193 6.34116 19.362 7.20287 19.5915C7.43316 19.6527 7.67884 19.6009 7.86475 19.4518L9.60756 18.0605C9.74256 18.0643 9.87756 18.0643 10.0126 18.0605L11.7601 19.4593C11.9461 19.608 12.1918 19.6595 12.4219 19.598C13.2839 19.3687 14.1115 19.0257 14.8829 18.578C15.0876 18.4592 15.2241 18.2507 15.2513 18.0155L15.4988 15.7918C15.5963 15.6993 15.6901 15.6055 15.7801 15.5105L18.0094 15.248C18.2447 15.2207 18.4533 15.0837 18.5719 14.8787C19.0188 14.107 19.3615 13.2794 19.591 12.4177C19.6522 12.1874 19.6004 11.9418 19.4513 11.7559L18.0601 10.013ZM16.5507 9.40367C16.5666 9.67469 16.5666 9.94641 16.5507 10.2174C16.5395 10.403 16.5976 10.5861 16.7138 10.7312L18.0441 12.3934C17.8915 12.8785 17.696 13.3491 17.4601 13.7996L15.3413 14.0396C15.1568 14.0601 14.9864 14.1483 14.8632 14.2871C14.6827 14.4901 14.4905 14.6823 14.2876 14.8627C14.1487 14.986 14.0605 15.1563 14.0401 15.3409L13.8047 17.4577C13.3543 17.6938 12.8837 17.8893 12.3985 18.0418L10.7354 16.7115C10.6023 16.6052 10.437 16.5473 10.2666 16.5474H10.2216C9.95061 16.5634 9.67889 16.5634 9.40787 16.5474C9.22232 16.5363 9.03924 16.5944 8.89412 16.7105L7.22725 18.0418C6.74212 17.8891 6.27152 17.6937 5.821 17.4577L5.581 15.3418C5.56051 15.1573 5.47233 14.9869 5.3335 14.8637C5.13054 14.6832 4.93833 14.491 4.75787 14.288C4.63462 14.1492 4.46426 14.061 4.27975 14.0405L2.16287 13.8043C1.9268 13.3538 1.73134 12.8832 1.57881 12.398L2.90912 10.7349C3.02528 10.5898 3.08342 10.4067 3.07225 10.2212C3.05631 9.95016 3.05631 9.67844 3.07225 9.40742C3.08342 9.22187 3.02528 9.03879 2.90912 8.89367L1.57881 7.22773C1.73146 6.74261 1.92691 6.27201 2.16287 5.82148L4.27881 5.58148C4.46332 5.561 4.63368 5.47282 4.75693 5.33398C4.93739 5.13102 5.1296 4.93882 5.33256 4.75836C5.47194 4.63503 5.56049 4.46428 5.581 4.2793L5.81631 2.16336C6.26678 1.92729 6.73739 1.73183 7.22256 1.5793L8.88568 2.90961C9.0308 3.02577 9.21389 3.0839 9.39943 3.07273C9.67045 3.0568 9.94217 3.0568 10.2132 3.07273C10.3987 3.0839 10.5818 3.02577 10.7269 2.90961L12.3929 1.5793C12.878 1.73195 13.3486 1.9274 13.7991 2.16336L14.0391 4.2793C14.0596 4.46381 14.1478 4.63417 14.2866 4.75742C14.4896 4.93788 14.6818 5.13009 14.8622 5.33305C14.9855 5.47188 15.1559 5.56007 15.3404 5.58055L17.4572 5.81586C17.6933 6.26633 17.8888 6.73694 18.0413 7.22211L16.711 8.88523C16.5937 9.03158 16.5355 9.21654 16.5479 9.40367H16.5507Z" fill="currentColor"/>
@@ -97,12 +101,68 @@ const StudentDashboard = () => {
         // Parallel fetch for better performance
         const [batchesRes, activitiesRes, statsRes] = await Promise.all([
           StudentApi.getMyBatches(user.id),
-          StudentApi.getUpcomingActivities(user.id, 5),
+          StudentApi.getUpcomingActivities(user.id, 20), // Get more activities to allow filtering
           StudentApi.getMyStatistics(user.id)
         ])
 
         if (batchesRes.data) setBatches(batchesRes.data)
-        if (activitiesRes.data) setActivities(activitiesRes.data)
+        if (activitiesRes.data) {
+          setActivities(activitiesRes.data)
+          
+          // Fetch schedule exceptions for each batch and merge schedules
+          const enrichedActivities = await Promise.all(
+            activitiesRes.data.map(async (activity: any) => {
+              if (!activity.batch?.weekly_schedule || !activity.batch.start_date) {
+                return { ...activity, scheduleInfo: null }
+              }
+
+              try {
+                // Get schedule exceptions for this batch
+                const exceptionsRes = await StudentApi.getBatchScheduleExceptions(activity.batch.id)
+                const exceptions = exceptionsRes.data || []
+
+                // Merge schedule with exceptions
+                const today = new Date()
+                today.setHours(0, 0, 0, 0)
+                const nextWeekEnd = new Date(today)
+                nextWeekEnd.setDate(today.getDate() + 7)
+                
+                const endDate = activity.batch.end_date 
+                  ? (new Date(activity.batch.end_date) < nextWeekEnd 
+                      ? activity.batch.end_date 
+                      : nextWeekEnd.toISOString().split('T')[0])
+                  : nextWeekEnd.toISOString().split('T')[0]
+
+                const mergedSchedule = mergeScheduleWithExceptions(
+                  activity.batch.weekly_schedule,
+                  exceptions,
+                  activity.batch.start_date,
+                  endDate
+                )
+
+                // Find the class schedule for the topic's due date
+                const topicDate = new Date(activity.due_date)
+                topicDate.setHours(0, 0, 0, 0)
+                
+                const classSchedule = mergedSchedule.find(item => {
+                  const itemDate = new Date(item.date)
+                  itemDate.setHours(0, 0, 0, 0)
+                  return itemDate.getTime() === topicDate.getTime()
+                })
+
+                return {
+                  ...activity,
+                  scheduleInfo: classSchedule || null
+                }
+              } catch (error) {
+                console.error('Error fetching schedule for activity:', error)
+                return { ...activity, scheduleInfo: null }
+              }
+            })
+          )
+
+          setActivitiesWithSchedule(enrichedActivities)
+        }
         if (statsRes.data) setStatistics(statsRes.data)
       } catch (error) {
         // Silent catch - data loading error
@@ -162,6 +222,11 @@ const StudentDashboard = () => {
   
   // Show "Browse Academies" if user has no active enrollments OR has pending/rejected enrollments
   const shouldShowBrowseAcademies = activeBatches.length === 0 || pendingEnrollments.length > 0 || rejectedEnrollments.length > 0
+
+  // Filter activities by selected batch
+  const filteredActivities = selectedActivityBatch === 'all'
+    ? activitiesWithSchedule
+    : activitiesWithSchedule.filter((activity: any) => activity.batch?.id === selectedActivityBatch)
 
   return (
     <div className="flex flex-col w-full min-h-screen bg-white font-lexend">
@@ -283,6 +348,8 @@ const StudentDashboard = () => {
                     setActiveNav(item.name)
                     if (item.name === 'Courses') {
                       navigate('/student/courses')
+                    } else if (item.name === 'Settings') {
+                      navigate('/student/settings')
                     }
                   }}
                   className={`flex items-center gap-3 px-3 py-2 rounded-[20px] text-sm font-normal ${
@@ -295,7 +362,7 @@ const StudentDashboard = () => {
                     {item.icon}
                   </div>
                   <span>{item.name}</span>
-                  {item.comingSoon && (
+                  {item.comingSoon && item.name !== 'Settings' && (
                     <span className="ml-auto text-xs px-2 py-0.5 bg-[#FFF4E5] text-[#FF9500] rounded-full font-medium">
                       Coming soon
                     </span>
@@ -344,9 +411,25 @@ const StudentDashboard = () => {
           <div className="px-3 sm:px-4 md:px-6 mx-2 sm:mx-3">
             <div className="flex gap-4 sm:gap-6 p-4 sm:p-6 rounded-xl border border-[#DBE5E0] bg-white min-h-[283px] sm:h-[283px]">
               <div className="flex flex-col gap-3 flex-1">
-                <h2 className="text-lg sm:text-xl font-bold leading-7 sm:leading-[31px] text-[#121212]">
-                  Upcoming Activities
-                </h2>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg sm:text-xl font-bold leading-7 sm:leading-[31px] text-[#121212]">
+                    Upcoming Activities
+                  </h2>
+                  {activeBatches.length > 1 && (
+                    <select
+                      value={selectedActivityBatch}
+                      onChange={(e) => setSelectedActivityBatch(e.target.value)}
+                      className="text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-[#F0F5F2] text-[#5E8C7D] border border-[#DBE5E0] cursor-pointer appearance-none pr-6 sm:pr-8"
+                    >
+                      <option value="all">All Batches</option>
+                      {activeBatches.map(batch => (
+                        <option key={batch.id} value={batch.id}>
+                          {batch.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
                 
                 <div className="flex flex-col gap-3.5 overflow-y-auto">
                   {/* Show Browse Academies if user has no enrollments or has pending/rejected */}
@@ -376,41 +459,89 @@ const StudentDashboard = () => {
                     </div>
                   )}
                   
-                  {activities.length === 0 && !shouldShowBrowseAcademies ? (
+                  {filteredActivities.length === 0 && !shouldShowBrowseAcademies ? (
                     <div className="flex justify-center items-center py-8 text-[#5E8C7D] text-sm">
                       No upcoming activities
                     </div>
                   ) : (
-                    activities.map((activity, index) => (
-                      <div key={activity.id}>
-                        {shouldShowBrowseAcademies && index === 0 && (
-                          <div className="w-full h-[1.344px] bg-[#ECECEC] my-3.5" />
-                        )}
-                        <div className="flex justify-between items-center px-3">
-                          <div className="flex flex-col gap-1 flex-1">
-                            <div className="text-base leading-7 text-[#121212] opacity-70">
-                              {activity.title}
+                    filteredActivities.map((activity: any, index: number) => {
+                      const scheduleInfo = activity.scheduleInfo
+                      const hasScheduleChange = scheduleInfo && scheduleInfo.status !== 'normal'
+                      
+                      return (
+                        <div key={activity.id}>
+                          {shouldShowBrowseAcademies && index === 0 && (
+                            <div className="w-full h-[1.344px] bg-[#ECECEC] my-3.5" />
+                          )}
+                          <div className={`flex justify-between items-start px-3 py-2 rounded-lg ${hasScheduleChange ? 'bg-yellow-50 border border-yellow-200' : ''}`}>
+                            <div className="flex flex-col gap-1 flex-1">
+                              <div className="text-base leading-7 text-[#121212] opacity-70">
+                                {activity.title}
+                              </div>
+                              <div className="text-sm leading-4 text-[#41475E] opacity-50">
+                                {formatDate(activity.due_date)} • {activity.batch?.skill?.name}
+                              </div>
+                              {scheduleInfo && (
+                                <div className="mt-1 flex flex-col gap-1">
+                                  {scheduleInfo.status === 'unavailable' ? (
+                                    <div className="text-xs text-red-600 flex items-center gap-1">
+                                      <span className="line-through">
+                                        {getDayName(scheduleInfo.day)}: {formatScheduleTime(scheduleInfo.from_time)} - {formatScheduleTime(scheduleInfo.to_time)}
+                                      </span>
+                                      <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px] font-medium">Unavailable</span>
+                                    </div>
+                                  ) : scheduleInfo.status === 'time_changed' ? (
+                                    <div className="text-xs text-yellow-700 flex items-center gap-1 flex-wrap">
+                                      <span className="font-medium">
+                                        {getDayName(scheduleInfo.day)}: {formatScheduleTime(scheduleInfo.from_time)} - {formatScheduleTime(scheduleInfo.to_time)}
+                                      </span>
+                                      {scheduleInfo.original_time && (
+                                        <span className="text-gray-600">
+                                          (changed from {scheduleInfo.original_time})
+                                        </span>
+                                      )}
+                                      <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-[10px] font-medium">Time Changed</span>
+                                    </div>
+                                  ) : scheduleInfo.status === 'moved' ? (
+                                    <div className="text-xs text-blue-700 flex items-center gap-1 flex-wrap">
+                                      <span className="font-medium">
+                                        {getDayName(scheduleInfo.day)}: {formatScheduleTime(scheduleInfo.from_time)} - {formatScheduleTime(scheduleInfo.to_time)}
+                                      </span>
+                                      {scheduleInfo.original_time && (
+                                        <span className="text-gray-600">
+                                          (moved from {scheduleInfo.original_time})
+                                        </span>
+                                      )}
+                                      <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-medium">Moved</span>
+                                    </div>
+                                  ) : (
+                                    <div className="text-xs text-[#5E8C7D]">
+                                      {getDayName(scheduleInfo.day)}: {formatScheduleTime(scheduleInfo.from_time)} - {formatScheduleTime(scheduleInfo.to_time)}
+                                    </div>
+                                  )}
+                                  {scheduleInfo.exception?.notes && (
+                                    <p className="text-xs text-gray-600 italic mt-0.5">{scheduleInfo.exception.notes}</p>
+                                  )}
+                                </div>
+                              )}
                             </div>
-                            <div className="text-sm leading-4 text-[#41475E] opacity-50">
-                              {formatDate(activity.due_date)} • {activity.batch?.skill?.name}
-                            </div>
+                            
+                            <button
+                              onClick={() => handleViewTopic(activity)}
+                              className="flex-shrink-0 hover:opacity-70 transition-opacity ml-2"
+                              title="View topic"
+                            >
+                              <svg width="20" height="14" viewBox="0 0 20 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M10 0C13.903 0 17.7363 2.23654 19.8945 6.55273C20.0353 6.83419 20.0353 7.16579 19.8945 7.44727C17.7363 11.7638 13.9031 14 10 14C6.09698 13.9999 2.26363 11.7636 0.105469 7.44727C-0.0351003 7.16585 -0.0352276 6.83411 0.105469 6.55273C2.26364 2.2365 6.09703 0.000127203 10 0ZM10 4C8.34339 4.00021 7.00018 5.34338 7 7C7 8.65677 8.34328 9.99979 10 10C11.6569 10 13 8.6569 13 7C12.9998 5.34326 11.6568 4 10 4Z" fill="#5E8C7D"/>
+                              </svg>
+                            </button>
                           </div>
-                          
-                          <button
-                            onClick={() => handleViewTopic(activity)}
-                            className="flex-shrink-0 hover:opacity-70 transition-opacity"
-                            title="View topic"
-                          >
-                            <svg width="20" height="14" viewBox="0 0 20 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M10 0C13.903 0 17.7363 2.23654 19.8945 6.55273C20.0353 6.83419 20.0353 7.16579 19.8945 7.44727C17.7363 11.7638 13.9031 14 10 14C6.09698 13.9999 2.26363 11.7636 0.105469 7.44727C-0.0351003 7.16585 -0.0352276 6.83411 0.105469 6.55273C2.26364 2.2365 6.09703 0.000127203 10 0ZM10 4C8.34339 4.00021 7.00018 5.34338 7 7C7 8.65677 8.34328 9.99979 10 10C11.6569 10 13 8.6569 13 7C12.9998 5.34326 11.6568 4 10 4Z" fill="#5E8C7D"/>
-                            </svg>
-                          </button>
+                          {index < filteredActivities.length - 1 && (
+                            <div className="w-full h-[1.344px] bg-[#ECECEC] my-3.5" />
+                          )}
                         </div>
-                        {index < activities.length - 1 && (
-                          <div className="w-full h-[1.344px] bg-[#ECECEC] my-3.5" />
-                        )}
-                      </div>
-                    ))
+                      )
+                    })
                   )}
                 </div>
               </div>
@@ -445,20 +576,14 @@ const StudentDashboard = () => {
             </div>
           )}
 
-          {/* Topics Covered */}
+          {/* Enrolled Batches */}
           <div className="flex flex-col mt-3">
-            <div className="px-4 sm:px-6 py-4 sm:py-5 pb-3">
-              <h2 className="text-lg sm:text-xl md:text-[22px] font-bold leading-6 sm:leading-7 text-[#0F1717]">
-                Topics Covered
-              </h2>
-            </div>
-
             <div className="flex gap-2 px-2 sm:px-4">
               <div className="flex-1 min-h-[400px] sm:min-h-[524px]">
                 <div className="flex flex-col h-full p-4 sm:p-6 md:p-[29px] rounded-xl border border-[#DBE6E0] bg-white">
                   <div className="flex justify-between items-center mb-4 sm:mb-[18px]">
                     <div className="text-base sm:text-lg font-normal text-[#1C1D1D] opacity-80">
-                      Enrolled Classes
+                      Enrolled Batches
                     </div>
                     <button className="flex items-center justify-center w-6 h-6 p-1 rounded-full bg-[rgba(28,29,29,0.05)]">
                       <MagnifyingGlassIcon className="w-5 h-5 sm:w-6 sm:h-6 text-[#1C1D1D]" />

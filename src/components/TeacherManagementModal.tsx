@@ -30,11 +30,6 @@ export const TeacherManagementModal: React.FC<TeacherManagementModalProps> = ({
   teacher,
   onTeacherUpdated
 }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedTeacher, setEditedTeacher] = useState({
-    full_name: '',
-    email: ''
-  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [teacherBatches, setTeacherBatches] = useState<any[]>([]);
@@ -46,10 +41,6 @@ export const TeacherManagementModal: React.FC<TeacherManagementModalProps> = ({
 
   useEffect(() => {
     if (isOpen && teacher.teacher) {
-      setEditedTeacher({
-        full_name: teacher.teacher.full_name,
-        email: teacher.teacher.email
-      });
       loadTeacherBatches();
       loadAllBatches();
       loadTeacherSkills();
@@ -122,33 +113,6 @@ export const TeacherManagementModal: React.FC<TeacherManagementModalProps> = ({
     }
   };
 
-  const handleSave = async () => {
-    if (!teacher.teacher) return;
-    
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Update teacher information
-      const { error } = await AdminApi.updateUser(teacher.teacher_id, {
-        full_name: editedTeacher.full_name,
-        email: editedTeacher.email
-      });
-
-      if (error) {
-        setError(error);
-        return;
-      }
-
-      setIsEditing(false);
-      onTeacherUpdated();
-    } catch (error) {
-      setError('Failed to update teacher information');
-      console.error('Error updating teacher:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleApproveTeacher = async () => {
     setLoading(true);
@@ -309,33 +273,7 @@ export const TeacherManagementModal: React.FC<TeacherManagementModalProps> = ({
         <div className="mb-6">
           <h3 className="text-lg font-semibold text-[#0F1717] mb-4">Teacher Information</h3>
           
-          {isEditing ? (
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-[#0F1717] mb-2">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  value={editedTeacher.full_name}
-                  onChange={(e) => setEditedTeacher(prev => ({ ...prev, full_name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-[#DBE5E0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E8C7D]"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[#0F1717] mb-2">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={editedTeacher.email}
-                  onChange={(e) => setEditedTeacher(prev => ({ ...prev, email: e.target.value }))}
-                  className="w-full px-3 py-2 border border-[#DBE5E0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E8C7D]"
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="bg-[#F0F5F2] rounded-lg p-4">
+          <div className="bg-[#F0F5F2] rounded-lg p-4">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-12 h-12 bg-[#5E8C7D] rounded-full flex items-center justify-center flex-shrink-0">
                   <span className="text-white font-bold text-lg">
@@ -406,7 +344,6 @@ export const TeacherManagementModal: React.FC<TeacherManagementModalProps> = ({
                 )}
               </div>
             </div>
-          )}
         </div>
 
         {/* Approval Section - Show if pending or rejected */}
@@ -586,57 +523,30 @@ export const TeacherManagementModal: React.FC<TeacherManagementModalProps> = ({
 
         {/* Action Buttons */}
         <div className="flex gap-3 justify-end">
-          {isEditing ? (
+          {teacher.status === 'approved' && (
             <>
               <button
-                onClick={() => setIsEditing(false)}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                onClick={handleRejectTeacher}
                 disabled={loading}
+                className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors disabled:opacity-50"
               >
-                Cancel
+                {loading ? 'Suspending...' : 'Suspend Teacher'}
               </button>
               <button
-                onClick={handleSave}
+                onClick={handleRemoveTeacher}
                 disabled={loading}
-                className="px-4 py-2 bg-[#5E8C7D] text-white rounded-lg hover:bg-[#4a6b5d] transition-colors disabled:opacity-50"
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
               >
-                {loading ? 'Saving...' : 'Save Changes'}
-              </button>
-            </>
-          ) : (
-            <>
-              {teacher.status === 'approved' && (
-                <>
-                  <button
-                    onClick={handleRejectTeacher}
-                    disabled={loading}
-                    className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors disabled:opacity-50"
-                  >
-                    {loading ? 'Suspending...' : 'Suspend Teacher'}
-                  </button>
-                  <button
-                    onClick={() => setIsEditing(true)}
-                    className="px-4 py-2 bg-[#5E8C7D] text-white rounded-lg hover:bg-[#4a6b5d] transition-colors"
-                  >
-                    Edit Information
-                  </button>
-                  <button
-                    onClick={handleRemoveTeacher}
-                    disabled={loading}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-                  >
-                    {loading ? 'Removing...' : 'Remove Teacher'}
-                  </button>
-                </>
-              )}
-              <button
-                onClick={onClose}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-              >
-                Close
+                {loading ? 'Removing...' : 'Remove Teacher'}
               </button>
             </>
           )}
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>

@@ -13,7 +13,7 @@ export interface MergedSchedule {
   day: string;
   from_time: string;
   to_time: string;
-  status: 'normal' | 'cancelled' | 'time_changed' | 'moved';
+  status: 'normal' | 'unavailable' | 'time_changed' | 'moved';
   original_time?: string;
   exception?: ScheduleException;
 }
@@ -168,7 +168,7 @@ export function mergeScheduleWithExceptions(
     if (exception.action === 'cancelled') {
       return {
         ...classInstance,
-        status: 'cancelled' as const,
+        status: 'unavailable' as const,
         exception
       };
     }

@@ -346,6 +346,94 @@ export const TeacherBatchDetailModal: React.FC<TeacherBatchDetailModalProps> = (
                     {batch?.weekly_schedule && batch.weekly_schedule.length > 0 && (
                       <div className="bg-[#F0F5F2] rounded-lg p-4 mt-6">
                         <h3 className="text-base font-semibold text-[#0F1717] mb-3">Weekly Schedule</h3>
+                        
+                        {/* Highlighted Changes Section */}
+                        {mergedSchedule.filter(item => item.status !== 'normal').length > 0 && (
+                          <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-3 mb-4">
+                            <h4 className="text-sm font-bold text-[#0F1717] mb-2 flex items-center gap-2">
+                              <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                              Recent Schedule Changes
+                            </h4>
+                            <div className="space-y-2">
+                              {mergedSchedule
+                                .filter(item => item.status !== 'normal')
+                                .map((scheduleItem, index) => {
+                                  const today = new Date()
+                                  today.setHours(0, 0, 0, 0)
+                                  if (scheduleItem.date < today) return null
+
+                                  return (
+                                    <div
+                                      key={`change-${index}`}
+                                      className={`rounded-lg p-2 border-2 ${
+                                        scheduleItem.status === 'unavailable'
+                                          ? 'bg-red-50 border-red-200'
+                                          : scheduleItem.status === 'time_changed'
+                                          ? 'bg-yellow-50 border-yellow-200'
+                                          : 'bg-blue-50 border-blue-200'
+                                      }`}
+                                    >
+                                      <div className="flex items-start justify-between">
+                                        <div className="flex-1">
+                                          <div className="font-medium text-[#0F1717] text-xs mb-1">
+                                            {getDayName(scheduleItem.day)}, {scheduleItem.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                          </div>
+                                          {scheduleItem.status === 'cancelled' ? (
+                                            <div className="text-xs text-red-700">
+                                              <span className="line-through">
+                                                {formatScheduleTime(scheduleItem.from_time)} - {formatScheduleTime(scheduleItem.to_time)}
+                                              </span>
+                                              <span className="ml-2 font-medium">Unavailable</span>
+                                            </div>
+                                          ) : scheduleItem.status === 'time_changed' ? (
+                                            <div className="text-xs text-yellow-800">
+                                              <span className="font-medium">
+                                                {formatScheduleTime(scheduleItem.from_time)} - {formatScheduleTime(scheduleItem.to_time)}
+                                              </span>
+                                              {scheduleItem.original_time && (
+                                                <span className="ml-2 text-gray-600">
+                                                  (changed from {scheduleItem.original_time})
+                                                </span>
+                                              )}
+                                            </div>
+                                          ) : scheduleItem.status === 'moved' ? (
+                                            <div className="text-xs text-blue-800">
+                                              <span className="font-medium">
+                                                {getDayName(scheduleItem.day)}: {formatScheduleTime(scheduleItem.from_time)} - {formatScheduleTime(scheduleItem.to_time)}
+                                              </span>
+                                              {scheduleItem.original_time && (
+                                                <span className="ml-2 text-gray-600">
+                                                  (moved from {scheduleItem.original_time})
+                                                </span>
+                                              )}
+                                            </div>
+                                          ) : null}
+                                          {scheduleItem.exception?.notes && (
+                                            <p className="text-xs text-gray-700 mt-1 italic">
+                                              Note: {scheduleItem.exception.notes}
+                                            </p>
+                                          )}
+                                        </div>
+                                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ml-2 ${
+                                          scheduleItem.status === 'unavailable'
+                                            ? 'bg-red-100 text-red-700'
+                                            : scheduleItem.status === 'time_changed'
+                                            ? 'bg-yellow-100 text-yellow-700'
+                                            : 'bg-blue-100 text-blue-700'
+                                        }`}>
+                                          {scheduleItem.status === 'cancelled' ? 'Unavailable' :
+                                           scheduleItem.status === 'time_changed' ? 'Time Changed' : 'Moved'}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  )
+                                })}
+                            </div>
+                          </div>
+                        )}
+
                         {mergedSchedule.length > 0 ? (
                           <div className="space-y-2">
                             {mergedSchedule.slice(0, 10).map((scheduleItem, index) => {
@@ -357,18 +445,22 @@ export const TeacherBatchDetailModal: React.FC<TeacherBatchDetailModalProps> = (
                               return (
                                 <div key={index} className="bg-white rounded-lg p-3 border border-[#DBE5E0]">
                                   <div className="flex items-center justify-between">
-                                    <div>
+                                    <div className="flex-1">
                                       <div className="font-medium text-[#0F1717] text-sm">
                                         {getDayName(scheduleItem.day)}, {scheduleItem.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                                       </div>
                                       {scheduleItem.status === 'cancelled' ? (
-                                        <div className="text-sm text-red-600 line-through">
-                                          {formatScheduleTime(scheduleItem.from_time)} - {formatScheduleTime(scheduleItem.to_time)}
-                                          <span className="ml-2 text-xs">(Unavailable)</span>
+                                        <div className="text-sm text-red-600">
+                                          <span className="line-through">
+                                            {formatScheduleTime(scheduleItem.from_time)} - {formatScheduleTime(scheduleItem.to_time)}
+                                          </span>
+                                          <span className="ml-2 text-xs font-medium">(Unavailable)</span>
                                         </div>
                                       ) : scheduleItem.status === 'time_changed' ? (
                                         <div className="text-sm text-[#5E8C7D]">
-                                          {formatScheduleTime(scheduleItem.from_time)} - {formatScheduleTime(scheduleItem.to_time)}
+                                          <span className="font-medium">
+                                            {formatScheduleTime(scheduleItem.from_time)} - {formatScheduleTime(scheduleItem.to_time)}
+                                          </span>
                                           {scheduleItem.original_time && (
                                             <span className="ml-2 text-xs text-gray-500">
                                               (changed from {scheduleItem.original_time})
@@ -377,7 +469,9 @@ export const TeacherBatchDetailModal: React.FC<TeacherBatchDetailModalProps> = (
                                         </div>
                                       ) : scheduleItem.status === 'moved' ? (
                                         <div className="text-sm text-[#5E8C7D]">
-                                          {getDayName(scheduleItem.day)}: {formatScheduleTime(scheduleItem.from_time)} - {formatScheduleTime(scheduleItem.to_time)}
+                                          <span className="font-medium">
+                                            {getDayName(scheduleItem.day)}: {formatScheduleTime(scheduleItem.from_time)} - {formatScheduleTime(scheduleItem.to_time)}
+                                          </span>
                                           {scheduleItem.original_time && (
                                             <span className="ml-2 text-xs text-gray-500">
                                               (moved from {scheduleItem.original_time})
@@ -393,6 +487,18 @@ export const TeacherBatchDetailModal: React.FC<TeacherBatchDetailModalProps> = (
                                         <p className="text-xs text-gray-600 mt-1 italic">{scheduleItem.exception.notes}</p>
                                       )}
                                     </div>
+                                    {scheduleItem.status !== 'normal' && (
+                                      <span className={`text-xs px-2 py-1 rounded-full font-medium ml-2 ${
+                                        scheduleItem.status === 'unavailable'
+                                          ? 'bg-red-100 text-red-700'
+                                          : scheduleItem.status === 'time_changed'
+                                          ? 'bg-yellow-100 text-yellow-700'
+                                          : 'bg-blue-100 text-blue-700'
+                                      }`}>
+                                        {scheduleItem.status === 'cancelled' ? 'Unavailable' :
+                                         scheduleItem.status === 'time_changed' ? 'Changed' : 'Moved'}
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
                               );

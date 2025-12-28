@@ -724,7 +724,7 @@ export class StudentApi {
 
       const batchIds = enrollments.map(e => e.batch_id)
 
-      // Get upcoming topics
+      // Get upcoming topics with batch schedule info
       const today = new Date().toISOString().split('T')[0] // Format as YYYY-MM-DD
       const { data, error } = await supabase
         .from('topics')
@@ -736,6 +736,9 @@ export class StudentApi {
           batch:batches (
             id,
             name,
+            start_date,
+            end_date,
+            weekly_schedule,
             skill:skills (
               id,
               name
@@ -755,6 +758,31 @@ export class StudentApi {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to get upcoming activities'
       return { data: null, error: errorMessage }
+    }
+  }
+
+  /**
+   * Mark a topic as complete for a student
+   * This can be used to track when students complete/view topics
+   */
+  static async markTopicComplete(topicId: string, studentId: string): Promise<ApiResponse<void>> {
+    try {
+      // For now, we'll just return success
+      // In the future, you might want to create a topic_completions table:
+      // CREATE TABLE topic_completions (
+      //   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+      //   student_id UUID REFERENCES users(id) ON DELETE CASCADE,
+      //   topic_id UUID REFERENCES topics(id) ON DELETE CASCADE,
+      //   completed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      //   UNIQUE(student_id, topic_id)
+      // );
+      
+      // For now, we'll simulate success
+      // You can implement actual database tracking later
+      return { data: undefined, error: null };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to mark topic as complete';
+      return { data: undefined, error: errorMessage };
     }
   }
 
@@ -1186,6 +1214,33 @@ export class StudentApi {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to get academy enrollment status'
       return { data: null, error: errorMessage }
+    }
+  }
+
+  // =============================================
+  // SCHEDULE EXCEPTIONS
+  // =============================================
+
+  /**
+   * Get all schedule exceptions for a batch
+   * Returns schedule exceptions (read-only access for students)
+   */
+  static async getBatchScheduleExceptions(batchId: string): Promise<ApiResponse<any[]>> {
+    try {
+      const { data, error } = await supabase
+        .from('schedule_exceptions')
+        .select('*')
+        .eq('batch_id', batchId)
+        .order('exception_date', { ascending: true });
+
+      if (error) {
+        return { data: null, error: error.message };
+      }
+
+      return { data: data || [], error: null };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to get schedule exceptions';
+      return { data: null, error: errorMessage };
     }
   }
 }

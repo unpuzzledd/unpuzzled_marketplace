@@ -14,8 +14,10 @@ import AdminSignIn from './pages/AdminSignIn'
 import SmartRedirect from './pages/SmartRedirect'
 import AcademyDashboard from './pages/AcademyDashboard'
 import TeacherLanding from './pages/TeacherLanding'
+import TeacherSettings from './pages/TeacherSettings'
 import ViewTopic from './pages/ViewTopic'
 import BatchManagement from './pages/BatchManagement'
+import StudentSettings from './pages/StudentSettings'
 import ChessClasses from './pages/ChessClasses'
 import KarateClasses from './pages/KarateClasses'
 import ArtsClasses from './pages/ArtsClasses'
@@ -36,9 +38,11 @@ function App() {
             <Route path="/student" element={<StudentDashboard />} />
             <Route path="/student/courses" element={<StudentCourses />} />
             <Route path="/student/search" element={<StudentAcademySearch />} />
+            <Route path="/student/settings" element={<StudentSettings />} />
             <Route path="/academy" element={<AcademyDashboard />} />
             <Route path="/teacher" element={<TeacherLanding />} />
             <Route path="/teacher/search" element={<StudentAcademySearch />} />
+            <Route path="/teacher/settings" element={<TeacherSettings />} />
             <Route path="/batches" element={<BatchManagement />} />
             <Route path="/admin/signin" element={<AdminSignIn />} />
             <Route path="/admin" element={<AdminDashboard />} />

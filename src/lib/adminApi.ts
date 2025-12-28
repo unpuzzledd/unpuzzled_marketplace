@@ -1530,7 +1530,10 @@ export class AdminApi {
         .select(`
           *,
           student:users!batch_enrollments_student_id_fkey(*),
-          batch:batches!batch_enrollments_batch_id_fkey(*)
+          batch:batches!batch_enrollments_batch_id_fkey(
+            *,
+            skill:skills(*)
+          )
         `)
         .eq('batch.academy_id', academyId)
         .order('enrolled_at', { ascending: false });
@@ -1840,8 +1843,7 @@ export class AdminApi {
     studentId: string, 
     academyId: string, 
     skillId: string, 
-    score: number, 
-    notes?: string
+    score: number
   ): Promise<ApiResponse<any>> {
     try {
       const { data, error } = await supabase
@@ -1851,7 +1853,6 @@ export class AdminApi {
           academy_id: academyId,
           skill_id: skillId,
           score: score,
-          notes: notes || null,
           created_at: new Date().toISOString()
         })
         .select()

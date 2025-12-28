@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { StudentApi } from '../lib/studentApi';
+import { useAuth } from '../hooks/useAuth';
 
 interface ViewTopicProps {
   isOpen?: boolean;
@@ -12,8 +13,11 @@ interface ViewTopicProps {
 export const ViewTopic: React.FC<ViewTopicProps> = ({ isOpen = true, onClose, topicId, topic: topicProp }) => {
   const navigate = useNavigate();
   const params = useParams();
+  const { user } = useAuth();
   const [topic, setTopic] = useState<any>(topicProp || null);
   const [loading, setLoading] = useState(false);
+  const [completing, setCompleting] = useState(false);
+  const [completionError, setCompletionError] = useState<string | null>(null);
 
   // Get topicId from props, params, or use topicProp
   const effectiveTopicId = topicId || params.topicId;
@@ -52,8 +56,36 @@ export const ViewTopic: React.FC<ViewTopicProps> = ({ isOpen = true, onClose, to
     handleClose();
   };
 
-  const handleComplete = () => {
-    handleClose();
+  const handleComplete = async () => {
+    if (!topic?.id || !user?.id) {
+      setCompletionError('Missing topic or user information');
+      return;
+    }
+
+    setCompleting(true);
+    setCompletionError(null);
+
+    try {
+      // Mark topic as complete
+      const response = await StudentApi.markTopicComplete(topic.id, user.id);
+      
+      if (response.error) {
+        setCompletionError(response.error);
+        return;
+      }
+      
+      // Show success feedback (you can replace this with a toast notification)
+      // For now, we'll just close the modal after a brief delay
+      setTimeout(() => {
+        handleClose();
+      }, 300);
+      
+    } catch (error) {
+      console.error('Error completing topic:', error);
+      setCompletionError('Failed to mark topic as complete. Please try again.');
+    } finally {
+      setCompleting(false);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -196,9 +228,15 @@ export const ViewTopic: React.FC<ViewTopicProps> = ({ isOpen = true, onClose, to
         </div>
 
         <div className="flex flex-col sm:flex-row p-0 px-2 sm:px-4 items-stretch sm:items-center gap-3 sm:gap-4 self-stretch mt-2 sm:mt-0">
+          {completionError && (
+            <div className="w-full px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 mb-2">
+              {completionError}
+            </div>
+          )}
           <button 
             onClick={handleCancel}
-            className="flex h-10 sm:h-10 min-w-[84px] max-w-[480px] px-4 justify-center items-center flex-1 rounded-xl bg-[#F0F5F2] hover:bg-[#E5F5F0] transition-colors min-h-[44px] sm:min-h-0"
+            disabled={completing}
+            className="flex h-10 sm:h-10 min-w-[84px] max-w-[480px] px-4 justify-center items-center flex-1 rounded-xl bg-[#F0F5F2] hover:bg-[#E5F5F0] transition-colors min-h-[44px] sm:min-h-0 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="text-sm font-bold leading-[21px] text-[#0F1717] overflow-hidden text-ellipsis whitespace-nowrap text-center">
               Cancel
@@ -206,11 +244,21 @@ export const ViewTopic: React.FC<ViewTopicProps> = ({ isOpen = true, onClose, to
           </button>
           <button 
             onClick={handleComplete}
-            className="flex h-10 sm:h-10 min-w-[84px] max-w-[480px] px-4 justify-center items-center flex-1 rounded-xl bg-[#009963] hover:bg-[#007a4d] transition-colors min-h-[44px] sm:min-h-0"
+            disabled={completing || !topic?.id || !user?.id}
+            className="flex h-10 sm:h-10 min-w-[84px] max-w-[480px] px-4 justify-center items-center flex-1 rounded-xl bg-[#009963] hover:bg-[#007a4d] transition-colors min-h-[44px] sm:min-h-0 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span className="text-sm font-bold leading-[21px] text-white overflow-hidden text-ellipsis whitespace-nowrap text-center">
-              Complete
-            </span>
+            {completing ? (
+              <div className="flex items-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <span className="text-sm font-bold leading-[21px] text-white overflow-hidden text-ellipsis whitespace-nowrap text-center">
+                  Completing...
+                </span>
+              </div>
+            ) : (
+              <span className="text-sm font-bold leading-[21px] text-white overflow-hidden text-ellipsis whitespace-nowrap text-center">
+                Complete
+              </span>
+            )}
           </button>
         </div>
       </div>

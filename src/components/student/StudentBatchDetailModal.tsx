@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { StudentApi } from '../../lib/studentApi'
 import { ViewTopic } from '../../pages/ViewTopic'
+import { mergeScheduleWithExceptions, formatScheduleTime, getDayName } from '../../utils/scheduleUtils'
+import { ScheduleException } from '../../types/database'
 
 interface StudentBatchDetailModalProps {
   isOpen: boolean
@@ -10,7 +12,7 @@ interface StudentBatchDetailModalProps {
   studentId: string
 }
 
-type TabType = 'overview' | 'topics' | 'progress'
+type TabType = 'overview' | 'topics' | 'progress' | 'schedule'
 
 export const StudentBatchDetailModal = ({ 
   isOpen, 
@@ -26,6 +28,8 @@ export const StudentBatchDetailModal = ({
   const [loading, setLoading] = useState(true)
   const [showViewTopic, setShowViewTopic] = useState(false)
   const [selectedTopic, setSelectedTopic] = useState<any>(null)
+  const [mergedSchedule, setMergedSchedule] = useState<any[]>([])
+  const [scheduleExceptions, setScheduleExceptions] = useState<ScheduleException[]>([])
 
   useEffect(() => {
     const fetchBatchData = async () => {
@@ -33,19 +37,42 @@ export const StudentBatchDetailModal = ({
 
       setLoading(true)
       try {
-        const [detailsRes, topicsRes, scoreRes, rankRes] = await Promise.all([
+        const [detailsRes, topicsRes, scoreRes, rankRes, exceptionsRes] = await Promise.all([
           StudentApi.getBatchDetails(batch.id, studentId),
           StudentApi.getBatchTopics(batch.id),
           StudentApi.getBatchScore(studentId, batch.id),
-          StudentApi.getMyRankInBatch(studentId, batch.id)
+          StudentApi.getMyRankInBatch(studentId, batch.id),
+          StudentApi.getBatchScheduleExceptions(batch.id)
         ])
 
         if (detailsRes.data) setBatchDetails(detailsRes.data)
         if (topicsRes.data) setTopics(topicsRes.data)
         if (scoreRes.data) setScore(scoreRes.data)
         if (rankRes.data) setRank(rankRes.data)
+        if (exceptionsRes.data) setScheduleExceptions(exceptionsRes.data)
 
-        // Note: Schedule merging is handled in the display component if needed
+        // Merge schedule with exceptions (limit to next 7 days)
+        const batchData = detailsRes.data || batch
+        if (batchData?.weekly_schedule && batchData.weekly_schedule.length > 0 && batchData.start_date && batchData.end_date) {
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+          const nextWeekEnd = new Date(today)
+          nextWeekEnd.setDate(today.getDate() + 7)
+          
+          const endDate = new Date(batchData.end_date) < nextWeekEnd 
+            ? batchData.end_date 
+            : nextWeekEnd.toISOString().split('T')[0]
+          
+          const merged = mergeScheduleWithExceptions(
+            batchData.weekly_schedule,
+            exceptionsRes.data || [],
+            batchData.start_date,
+            endDate
+          )
+          setMergedSchedule(merged.filter(item => item.date >= today))
+        } else {
+          setMergedSchedule([])
+        }
       } catch (error) {
         console.error('Error fetching batch data:', error)
       } finally {
@@ -137,6 +164,16 @@ export const StudentBatchDetailModal = ({
                 }`}
               >
                 Progress
+              </button>
+              <button
+                onClick={() => setActiveTab('schedule')}
+                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'schedule'
+                    ? 'border-[#009963] text-[#009963]'
+                    : 'border-transparent text-[#5E8C7D] hover:text-[#009963]'
+                }`}
+              >
+                Schedule
               </button>
             </div>
 
@@ -246,6 +283,25 @@ export const StudentBatchDetailModal = ({
                           </div>
                         </div>
                       </div>
+
+                      {/* Weekly Schedule */}
+                      {(batchDetails?.weekly_schedule || batch?.weekly_schedule) && 
+                       (batchDetails?.weekly_schedule?.length > 0 || batch?.weekly_schedule?.length > 0) && (
+                        <div className="pt-6 border-t border-[#E5E8EB]">
+                          <h3 className="text-lg font-bold text-[#0F1717] mb-3">
+                            Weekly Schedule
+                          </h3>
+                          <div className="bg-[#F0F5F2] rounded-lg p-4">
+                            <div className="space-y-1">
+                              {(batchDetails?.weekly_schedule || batch?.weekly_schedule).map((entry: any, index: number) => (
+                                <div key={index} className="text-sm text-[#5E8C7D]">
+                                  {getDayName(entry.day)}: {formatScheduleTime(entry.from_time)} - {formatScheduleTime(entry.to_time)}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -391,6 +447,186 @@ export const StudentBatchDetailModal = ({
                           </p>
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {/* Schedule Tab */}
+                  {activeTab === 'schedule' && (
+                    <div className="space-y-6">
+                      {/* Highlighted Changes Section */}
+                      {mergedSchedule.filter(item => item.status !== 'normal').length > 0 && (
+                        <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-4">
+                          <h3 className="text-lg font-bold text-[#0F1717] mb-3 flex items-center gap-2">
+                            <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            Schedule Changes
+                          </h3>
+                          <div className="space-y-3">
+                            {mergedSchedule
+                              .filter(item => item.status !== 'normal')
+                              .map((scheduleItem, index) => {
+                                const today = new Date()
+                                today.setHours(0, 0, 0, 0)
+                                if (scheduleItem.date < today) return null
+
+                                return (
+                                  <div
+                                    key={index}
+                                    className={`rounded-lg p-3 border-2 ${
+                                      scheduleItem.status === 'cancelled'
+                                        ? 'bg-red-50 border-red-200'
+                                        : scheduleItem.status === 'time_changed'
+                                        ? 'bg-yellow-50 border-yellow-200'
+                                        : 'bg-blue-50 border-blue-200'
+                                    }`}
+                                  >
+                                    <div className="flex items-start justify-between">
+                                      <div className="flex-1">
+                                        <div className="font-medium text-[#0F1717] text-sm mb-1">
+                                          {getDayName(scheduleItem.day)}, {scheduleItem.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                        </div>
+                                        {scheduleItem.status === 'cancelled' ? (
+                                          <div className="text-sm text-red-700">
+                                            <span className="line-through">
+                                              {formatScheduleTime(scheduleItem.from_time)} - {formatScheduleTime(scheduleItem.to_time)}
+                                            </span>
+                                            <span className="ml-2 font-medium">Unavailable</span>
+                                          </div>
+                                        ) : scheduleItem.status === 'time_changed' ? (
+                                          <div className="text-sm text-yellow-800">
+                                            <span className="font-medium">
+                                              {formatScheduleTime(scheduleItem.from_time)} - {formatScheduleTime(scheduleItem.to_time)}
+                                            </span>
+                                            {scheduleItem.original_time && (
+                                              <span className="ml-2 text-xs text-gray-600">
+                                                (changed from {scheduleItem.original_time})
+                                              </span>
+                                            )}
+                                          </div>
+                                        ) : scheduleItem.status === 'moved' ? (
+                                          <div className="text-sm text-blue-800">
+                                            <span className="font-medium">
+                                              {getDayName(scheduleItem.day)}: {formatScheduleTime(scheduleItem.from_time)} - {formatScheduleTime(scheduleItem.to_time)}
+                                            </span>
+                                            {scheduleItem.original_time && (
+                                              <span className="ml-2 text-xs text-gray-600">
+                                                (moved from {scheduleItem.original_time})
+                                              </span>
+                                            )}
+                                          </div>
+                                        ) : null}
+                                        {scheduleItem.exception?.notes && (
+                                          <p className="text-xs text-gray-700 mt-2 italic">
+                                            Note: {scheduleItem.exception.notes}
+                                          </p>
+                                        )}
+                                      </div>
+                                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                                        scheduleItem.status === 'unavailable'
+                                          ? 'bg-red-100 text-red-700'
+                                          : scheduleItem.status === 'time_changed'
+                                          ? 'bg-yellow-100 text-yellow-700'
+                                          : 'bg-blue-100 text-blue-700'
+                                      }`}>
+                                        {scheduleItem.status === 'cancelled' ? 'Unavailable' :
+                                         scheduleItem.status === 'time_changed' ? 'Time Changed' : 'Moved'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Full Schedule Section */}
+                      <div>
+                        <h3 className="text-lg font-bold text-[#0F1717] mb-4">
+                          Upcoming Classes (Next 7 Days)
+                        </h3>
+                        {mergedSchedule.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center py-12 text-[#5E8C7D]">
+                            <svg className="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <p className="text-lg font-medium">No upcoming classes scheduled</p>
+                            <p className="text-sm mt-1">Check back later for schedule updates</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {mergedSchedule.map((scheduleItem, index) => {
+                              const today = new Date()
+                              today.setHours(0, 0, 0, 0)
+                              if (scheduleItem.date < today) return null
+
+                              return (
+                                <div
+                                  key={index}
+                                  className="bg-white rounded-lg p-3 border border-[#DBE5E0] hover:shadow-md transition-shadow"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex-1">
+                                      <div className="font-medium text-[#0F1717] text-sm mb-1">
+                                        {getDayName(scheduleItem.day)}, {scheduleItem.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                      </div>
+                                      {scheduleItem.status === 'cancelled' ? (
+                                        <div className="text-sm text-red-600">
+                                          <span className="line-through">
+                                            {formatScheduleTime(scheduleItem.from_time)} - {formatScheduleTime(scheduleItem.to_time)}
+                                          </span>
+                                          <span className="ml-2 text-xs">(Unavailable)</span>
+                                        </div>
+                                      ) : scheduleItem.status === 'time_changed' ? (
+                                        <div className="text-sm text-[#5E8C7D]">
+                                          <span className="font-medium">
+                                            {formatScheduleTime(scheduleItem.from_time)} - {formatScheduleTime(scheduleItem.to_time)}
+                                          </span>
+                                          {scheduleItem.original_time && (
+                                            <span className="ml-2 text-xs text-gray-500">
+                                              (changed from {scheduleItem.original_time})
+                                            </span>
+                                          )}
+                                        </div>
+                                      ) : scheduleItem.status === 'moved' ? (
+                                        <div className="text-sm text-[#5E8C7D]">
+                                          <span className="font-medium">
+                                            {getDayName(scheduleItem.day)}: {formatScheduleTime(scheduleItem.from_time)} - {formatScheduleTime(scheduleItem.to_time)}
+                                          </span>
+                                          {scheduleItem.original_time && (
+                                            <span className="ml-2 text-xs text-gray-500">
+                                              (moved from {scheduleItem.original_time})
+                                            </span>
+                                          )}
+                                        </div>
+                                      ) : (
+                                        <div className="text-sm text-[#5E8C7D]">
+                                          {formatScheduleTime(scheduleItem.from_time)} - {formatScheduleTime(scheduleItem.to_time)}
+                                        </div>
+                                      )}
+                                      {scheduleItem.exception?.notes && (
+                                        <p className="text-xs text-gray-600 mt-1 italic">{scheduleItem.exception.notes}</p>
+                                      )}
+                                    </div>
+                                    {scheduleItem.status !== 'normal' && (
+                                      <span className={`text-xs px-2 py-1 rounded-full font-medium ml-2 ${
+                                        scheduleItem.status === 'unavailable'
+                                          ? 'bg-red-100 text-red-700'
+                                          : scheduleItem.status === 'time_changed'
+                                          ? 'bg-yellow-100 text-yellow-700'
+                                          : 'bg-blue-100 text-blue-700'
+                                      }`}>
+                                        {scheduleItem.status === 'cancelled' ? 'Unavailable' :
+                                         scheduleItem.status === 'time_changed' ? 'Changed' : 'Moved'}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </>

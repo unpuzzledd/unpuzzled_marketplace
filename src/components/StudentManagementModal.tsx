@@ -29,11 +29,6 @@ export const StudentManagementModal: React.FC<StudentManagementModalProps> = ({
   student,
   onStudentUpdated
 }) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedStudent, setEditedStudent] = useState({
-    full_name: '',
-    email: ''
-  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
@@ -52,10 +47,6 @@ export const StudentManagementModal: React.FC<StudentManagementModalProps> = ({
 
   useEffect(() => {
     if (isOpen && student.student) {
-      setEditedStudent({
-        full_name: student.student.full_name,
-        email: student.student.email
-      });
       loadStudentData();
     }
   }, [isOpen, student]);
@@ -104,33 +95,6 @@ export const StudentManagementModal: React.FC<StudentManagementModalProps> = ({
     }
   };
 
-  const handleSave = async () => {
-    if (!student.student) return;
-    
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Update student information
-      const { error } = await AdminApi.updateUser(student.student_id, {
-        full_name: editedStudent.full_name,
-        email: editedStudent.email
-      });
-
-      if (error) {
-        setError(error);
-        return;
-      }
-
-      setIsEditing(false);
-      onStudentUpdated();
-    } catch (error) {
-      setError('Failed to update student information');
-      console.error('Error updating student:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleApproveClick = () => {
     setApprovalAction('approve');
@@ -223,8 +187,7 @@ export const StudentManagementModal: React.FC<StudentManagementModalProps> = ({
         student.student_id,
         student.academy_id,
         newScore.skill_id,
-        parseInt(newScore.score),
-        newScore.notes
+        parseInt(newScore.score)
       );
       
       if (error) {
@@ -264,33 +227,7 @@ export const StudentManagementModal: React.FC<StudentManagementModalProps> = ({
           <div>
             <h3 className="text-lg font-semibold text-[#0F1717] mb-4">Student Information</h3>
             
-            {isEditing ? (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-[#0F1717] mb-2">
-                    Full Name
-                  </label>
-                  <input
-                    type="text"
-                    value={editedStudent.full_name}
-                    onChange={(e) => setEditedStudent(prev => ({ ...prev, full_name: e.target.value }))}
-                    className="w-full px-3 py-2 border border-[#DBE5E0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E8C7D]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#0F1717] mb-2">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    value={editedStudent.email}
-                    onChange={(e) => setEditedStudent(prev => ({ ...prev, email: e.target.value }))}
-                    className="w-full px-3 py-2 border border-[#DBE5E0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E8C7D]"
-                  />
-                </div>
-              </div>
-            ) : (
-              <div className="bg-[#F0F5F2] rounded-lg p-4">
+            <div className="bg-[#F0F5F2] rounded-lg p-4">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-12 h-12 bg-[#5E8C7D] rounded-full flex items-center justify-center">
                     <span className="text-white font-bold text-lg">
@@ -341,7 +278,6 @@ export const StudentManagementModal: React.FC<StudentManagementModalProps> = ({
                   )}
                 </div>
               </div>
-            )}
 
             {/* Approval Actions */}
             {(student.status === 'pending' || student.status === 'rejected') && (
@@ -456,9 +392,9 @@ export const StudentManagementModal: React.FC<StudentManagementModalProps> = ({
                       <div className="flex justify-between items-center">
                         <div>
                           <h4 className="font-medium text-[#0F1717]">{score.skill?.name || 'Unknown Skill'}</h4>
-                          <p className="text-sm text-[#5E8C7D]">{score.notes || 'No notes'}</p>
+                          <p className="text-sm text-[#5E8C7D] capitalize">{score.level || 'beginner'}</p>
                         </div>
-                        <span className="text-lg font-bold text-[#5E8C7D]">{score.score}</span>
+                        <span className="text-lg font-bold text-[#5E8C7D]">{score.score || 0}</span>
                       </div>
                     </div>
                   ))}
@@ -501,18 +437,6 @@ export const StudentManagementModal: React.FC<StudentManagementModalProps> = ({
                       className="w-full px-3 py-2 border border-[#DBE5E0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E8C7D]"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[#0F1717] mb-1">
-                      Notes (Optional)
-                    </label>
-                    <textarea
-                      value={newScore.notes}
-                      onChange={(e) => setNewScore(prev => ({ ...prev, notes: e.target.value }))}
-                      placeholder="Add notes about the score..."
-                      className="w-full px-3 py-2 border border-[#DBE5E0] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5E8C7D]"
-                      rows={2}
-                    />
-                  </div>
                   <button
                     onClick={handleAddScore}
                     disabled={!newScore.skill_id || !newScore.score || loading}
@@ -535,31 +459,12 @@ export const StudentManagementModal: React.FC<StudentManagementModalProps> = ({
 
         {/* Action Buttons */}
         <div className="flex gap-3 justify-end mt-6">
-          {isEditing ? (
-            <>
-              <button
-                onClick={() => setIsEditing(false)}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-                disabled={loading}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={loading}
-                className="px-4 py-2 bg-[#5E8C7D] text-white rounded-lg hover:bg-[#4a6b5d] transition-colors disabled:opacity-50"
-              >
-                {loading ? 'Saving...' : 'Save Changes'}
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="px-4 py-2 bg-[#5E8C7D] text-white rounded-lg hover:bg-[#4a6b5d] transition-colors"
-            >
-              Edit Information
-            </button>
-          )}
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+          >
+            Close
+          </button>
         </div>
       </div>
 
